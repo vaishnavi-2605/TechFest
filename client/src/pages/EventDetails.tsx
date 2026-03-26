@@ -1,0 +1,193 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import SectionHeader from "@/components/SectionHeader";
+import { fetchEvent } from "@/data/api";
+import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeLabel } from "@/data/helpers";
+import { BackendEvent } from "@/types";
+import { BadgeCheck, Calendar, Clock, Image as ImageIcon, MapPin, Trophy } from "lucide-react";
+
+const EventDetailsPage = () => {
+  const { eventId = "" } = useParams();
+  const [event, setEvent] = useState<BackendEvent | null>(null);
+  const [alert, setAlert] = useState("");
+  const [previewPoster, setPreviewPoster] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchEvent(eventId)
+      .then((data) => setEvent(data.event || null))
+      .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load event."));
+  }, [eventId]);
+
+  const formatted = useMemo(() => (event ? formatBackendEvent(event) : null), [event]);
+  const formattedDescription = useMemo(() => formatDescriptionText(event?.description), [event?.description]);
+  const rewardText = useMemo(() => String(event?.displayPrize || formatted?.prize || "").trim(), [event?.displayPrize, formatted?.prize]);
+  const rewardLines = useMemo(
+    () => rewardText.split("\n").map((line) => line.trim()).filter(Boolean),
+    [rewardText]
+  );
+
+  return (
+    <div className="pt-28 pb-20">
+      <div className="container mx-auto px-4 max-w-5xl">
+        <SectionHeader title="Event Details" subtitle="View the full event information and poster." />
+
+        {!!alert && <p className="text-sm text-destructive mb-4">{alert}</p>}
+
+        {event && formatted ? (
+          <>
+            <motion.div
+              className="text-center mb-10"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, ease: "easeOut" }}
+            >
+              {formatted.category !== "Workshops" ? (
+                <span className="inline-flex px-3 py-1 rounded-full bg-primary/15 text-primary text-xs font-semibold mb-3">
+                  {formatted.category}
+                </span>
+              ) : null}
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground">{formatted.name}</h2>
+            </motion.div>
+
+            <div className="space-y-6">
+            <div className="max-w-4xl mx-auto">
+              {formatted.posterUrl ? (
+                <motion.button
+                  type="button"
+                  onClick={() => setPreviewPoster(formatted.posterUrl || null)}
+                  className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-2xl"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+                >
+                  <img
+                    src={formatted.posterUrl}
+                    alt={formatted.name}
+                    className="w-full max-h-[420px] md:max-h-[520px] object-contain"
+                  />
+                </motion.button>
+              ) : (
+                <motion.div
+                  className="w-full min-h-80 rounded-2xl border border-dashed border-white/15 bg-card/30 flex flex-col items-center justify-center gap-2 text-muted-foreground"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+                >
+                  <ImageIcon className="w-8 h-8" />
+                  <span>No poster available</span>
+                </motion.div>
+              )}
+            </div>
+
+            <motion.p
+              className="text-muted-foreground whitespace-pre-line"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.45 }}
+            >
+              {formattedDescription || event.description}
+            </motion.p>
+
+            <motion.div
+              className="space-y-5"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, ease: "easeOut", delay: 0.6 }}
+            >
+              {rewardLines.length ? (
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4 space-y-2">
+                  {rewardLines.map((line, index) => {
+                    const isCertificate = /cert/i.test(line);
+                    const Icon = isCertificate ? BadgeCheck : Trophy;
+                    return (
+                      <div key={`${line}-${index}`} className="flex items-start gap-2 text-foreground font-semibold">
+                        <Icon className={`w-4 h-4 mt-0.5 ${isCertificate ? "text-emerald-400" : "text-amber-400"}`} />
+                        <span>{line}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Department</p>
+                  <p className="text-foreground font-semibold">{event.department}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Team Size</p>
+                  <p className="text-foreground font-semibold">{formatted.teamSize}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Deadline</p>
+                  <p className="text-foreground font-semibold">{formatted.deadline}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Date</span>
+                  </div>
+                  <p className="text-foreground font-semibold">{formatDateLabel(event.time)}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+                    <Clock className="w-4 h-4" />
+                    <span>Time</span>
+                  </div>
+                  <p className="text-foreground font-semibold">{formatTimeLabel(event.time)}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4 sm:col-span-2">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>Venue</span>
+                  </div>
+                  <p className="text-foreground font-semibold">{event.address || "To be announced"}</p>
+                </div>
+              </div>
+
+              {!!event.rules?.length && (
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-3">Rules</p>
+                  <ul className="space-y-2 text-sm text-foreground/85 list-disc pl-5">
+                    {event.rules.map((rule) => (
+                      <li key={rule}>{rule}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link to={`/register?eventId=${event.eventId}`} className="px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-center">
+                  Register Now
+                </Link>
+                <Link to="/events" className="px-6 py-3 rounded-lg border border-white/15 text-muted-foreground text-center">
+                  Back to Events
+                </Link>
+              </div>
+            </motion.div>
+            </div>
+          </>
+        ) : null}
+        {previewPoster ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPoster(null)}>
+            <div
+              className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-card/95 p-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewPoster(null)}
+                className="absolute right-3 top-3 rounded-full bg-muted/70 px-3 py-1 text-xs text-foreground hover:bg-muted"
+              >
+                Close
+              </button>
+              <img src={previewPoster} alt={formatted?.name || "Event poster"} className="w-full max-h-[80vh] object-contain rounded-xl" />
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+export default EventDetailsPage;
