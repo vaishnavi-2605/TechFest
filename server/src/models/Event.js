@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const imageSchema = new mongoose.Schema(
+  {
+    data: { type: Buffer },
+    contentType: { type: String, trim: true },
+    filename: { type: String, trim: true }
+  },
+  { _id: false }
+);
+
 const subEventSchema = new mongoose.Schema(
   {
     subEventId: { type: String, required: true, trim: true },
@@ -30,10 +39,12 @@ const eventSchema = new mongoose.Schema(
     eventType: { type: String, enum: ["Technical", "Non-Technical", "Workshop"], default: "Technical" },
     description: { type: String, required: true, trim: true },
     posterUrl: { type: String, trim: true },
+    posterImage: imageSchema,
     isTeamEvent: { type: Boolean, required: true },
     teamSize: { type: Number, required: true, min: 1 },
     fee: { type: Number, required: true, min: 0 },
     paymentQrUrl: { type: String, trim: true },
+    paymentQrImage: imageSchema,
     address: { type: String, required: true, trim: true },
     time: { type: String, required: true, trim: true },
     guide: { type: String, required: true, trim: true },

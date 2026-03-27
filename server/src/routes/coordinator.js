@@ -6,7 +6,7 @@ const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { upload } = require("../utils/upload");
-const { uploadImage } = require("../utils/cloudinary");
+const { buildImageUrl, setStoredImage, setImageFromBodyValue } = require("../utils/imageStorage");
 
 const router = express.Router();
 
@@ -100,13 +100,11 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
       }
     }
 
-    const uploadedPhotoUrl = await uploadImage(req.files?.photo?.[0], "techfest/coordinators", req);
-    if (uploadedPhotoUrl) coordinator.photoUrl = uploadedPhotoUrl;
-    else if (photoUrl !== undefined) coordinator.photoUrl = String(photoUrl || "").trim();
+    if (req.files?.photo?.[0]) setStoredImage(coordinator, "photo", req.files.photo[0], req, "users");
+    else setImageFromBodyValue(coordinator, "photo", photoUrl);
 
-    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
-    if (uploadedPaymentQrUrl) coordinator.paymentQrUrl = uploadedPaymentQrUrl;
-    else if (paymentQrUrl !== undefined) coordinator.paymentQrUrl = String(paymentQrUrl || "").trim();
+    if (req.files?.paymentQr?.[0]) setStoredImage(coordinator, "paymentQr", req.files.paymentQr[0], req, "users");
+    else setImageFromBodyValue(coordinator, "paymentQr", paymentQrUrl);
 
     await coordinator.save();
 
@@ -209,17 +207,11 @@ router.post("/events", upload.fields([
       }
     }
 
-    const uploadedPosterUrl = await uploadImage(req.files?.poster?.[0], "techfest/posters", req);
-    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
     const finalFee = Number(fee || 0);
     const normalizedTeamSize = Math.max(1, Number(teamSize || 1));
     const derivedIsTeamEvent = normalizedTeamSize > 1;
-    const finalPaymentQrUrl = String(uploadedPaymentQrUrl || paymentQrUrl || coordinator.paymentQrUrl || "").trim();
-    if (finalFee > 0 && !finalPaymentQrUrl) {
-      return res.status(400).json({ error: "Payment QR is required for paid events." });
-    }
 
-    const event = await Event.create({
+    const event = new Event({
       eventId: normalizedEventId,
       department: coordinator.department || "General",
       eventType: normalizedEventType,
@@ -228,14 +220,14 @@ router.post("/events", upload.fields([
       shortDescription: String(shortDescription).trim(),
       description: String(description).trim(),
       fee: finalFee,
-      paymentQrUrl: finalPaymentQrUrl,
+      paymentQrUrl: "",
       isTeamEvent: derivedIsTeamEvent,
       teamSize: normalizedTeamSize,
       time: String(time || "").trim() || "To be announced",
       address: String(address || "").trim() || "To be announced",
       guide: coordinator.name,
       guidePhone: coordinator.phone || "N/A",
-      posterUrl: String(uploadedPosterUrl || posterUrl || "").trim(),
+      posterUrl: "",
       rules: parsedRules,
       subEvents: parsedSubEvents
         .map((sub) => ({
@@ -255,6 +247,21 @@ router.post("/events", upload.fields([
       coordinatorId: coordinator._id,
       status: "pending"
     });
+
+    const finalPaymentQrUrl = req.files?.paymentQr?.[0]
+      ? buildImageUrl(req, "events", event._id, "paymentQr")
+      : String(paymentQrUrl || coordinator.paymentQrUrl || "").trim();
+    if (finalFee > 0 && !finalPaymentQrUrl) {
+      return res.status(400).json({ error: "Payment QR is required for paid events." });
+    }
+
+    if (req.files?.poster?.[0]) setStoredImage(event, "poster", req.files.poster[0], req, "events");
+    else setImageFromBodyValue(event, "poster", posterUrl);
+
+    if (req.files?.paymentQr?.[0]) setStoredImage(event, "paymentQr", req.files.paymentQr[0], req, "events");
+    else event.paymentQrUrl = finalPaymentQrUrl;
+
+    await event.save();
 
     return res.status(201).json({
       message: "Event added and sent for admin approval.",
@@ -328,13 +335,11 @@ router.put("/events/:id", upload.fields([
       event.rules = parsedRules;
     }
 
-    const uploadedPosterUrl = await uploadImage(req.files?.poster?.[0], "techfest/posters", req);
-    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
-    if (uploadedPosterUrl) event.posterUrl = String(uploadedPosterUrl).trim();
-    else if (posterUrl !== undefined) event.posterUrl = String(posterUrl || "").trim();
+    if (req.files?.poster?.[0]) setStoredImage(event, "poster", req.files.poster[0], req, "events");
+    else setImageFromBodyValue(event, "poster", posterUrl);
 
-    if (uploadedPaymentQrUrl) event.paymentQrUrl = String(uploadedPaymentQrUrl).trim();
-    else if (paymentQrUrl !== undefined) event.paymentQrUrl = String(paymentQrUrl || "").trim();
+    if (req.files?.paymentQr?.[0]) setStoredImage(event, "paymentQr", req.files.paymentQr[0], req, "events");
+    else setImageFromBodyValue(event, "paymentQr", paymentQrUrl);
 
     if (Number(event.fee || 0) > 0 && !String(event.paymentQrUrl || "").trim()) {
       return res.status(400).json({ error: "Payment QR is required for paid events." });

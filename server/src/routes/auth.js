@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { upload } = require("../utils/upload");
-const { uploadImage } = require("../utils/cloudinary");
+const { setStoredImage, setImageFromBodyValue } = require("../utils/imageStorage");
 
 const router = express.Router();
 
@@ -49,7 +49,6 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
     }
 
     const passwordHash = await bcrypt.hash(plainPassword, 10);
-    const uploadedPhotoUrl = await uploadImage(req.file, "techfest/coordinators", req);
 
     const existingInactive = existingByEmail || existingByUsername;
     let user = existingInactive;
@@ -61,12 +60,13 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
       user.phone = normalizedPhone;
       user.email = normalizedEmail;
       user.passwordHash = passwordHash;
-      user.photoUrl = String(uploadedPhotoUrl || photoUrl || "").trim();
       user.role = "coordinator";
       user.isActive = true;
+      if (req.file) setStoredImage(user, "photo", req.file, req, "users");
+      else setImageFromBodyValue(user, "photo", photoUrl);
       await user.save();
     } else {
-      user = await User.create({
+      user = new User({
         name: String(name).trim(),
         username: normalizedUsername,
         coordinatorRole: String(coordinatorRole || "Event Coordinator").trim(),
@@ -74,9 +74,11 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
         phone: normalizedPhone,
         email: normalizedEmail,
         passwordHash,
-        photoUrl: String(uploadedPhotoUrl || photoUrl || "").trim(),
         role: "coordinator"
       });
+      if (req.file) setStoredImage(user, "photo", req.file, req, "users");
+      else setImageFromBodyValue(user, "photo", photoUrl);
+      await user.save();
     }
 
     const token = signToken(user);

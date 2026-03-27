@@ -18,6 +18,8 @@ npm install --prefix server
 
 Copy `server/.env.example` to `server/.env` and update values.
 
+For the frontend, create `client/.env` if you want to override the API base URL.
+
 ## 3) Run in development
 
 ```bash
@@ -26,6 +28,34 @@ npm run dev
 
 - Client: `http://localhost:5173`
 - Server: `http://localhost:5000`
+
+If `client/.env` does not set `VITE_API_BASE_URL`, the Vite dev server proxies `/api/*` requests to `http://localhost:5000`.
+
+## Deployment
+
+Set these environment variables before deploying:
+
+Backend:
+
+```bash
+DB_MODE=atlas
+MONGODB_URI=<your-atlas-uri>
+JWT_SECRET=<strong-random-secret>
+CLIENT_ORIGIN=https://your-frontend-domain.com
+PUBLIC_API_BASE_URL=https://your-backend-domain.com
+```
+
+Frontend:
+
+```bash
+VITE_API_BASE_URL=https://your-backend-domain.com
+```
+
+Notes:
+
+- New coordinator photos, event posters, and payment QR images are stored in MongoDB.
+- Image URLs are served by the backend through `/api/images/...`.
+- `PUBLIC_API_BASE_URL` should be your public backend URL in production so stored image links always resolve correctly.
 
 ## API endpoints (public)
 
