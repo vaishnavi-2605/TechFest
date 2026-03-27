@@ -12,6 +12,14 @@ import { formatBackendEvent, formatDateLabel, parseEventDate } from "@/data/help
 import { BackendEvent } from "@/types";
 import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-react";
 
+const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
+
+function matchesEventFilter(category: string, filter: (typeof eventFilterOptions)[number]) {
+  if (filter === "All") return true;
+  if (filter === "Workshop") return category === "Workshops";
+  return category === filter;
+}
+
 const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
   const { ref, inView } = useInView({ triggerOnce: true });
   const [count, setCount] = useState(0);
@@ -138,15 +146,36 @@ const AboutSection = ({ stats }: { stats: { label: string; value: number; icon: 
 };
 
 const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
+  const [activeFilter, setActiveFilter] = useState<(typeof eventFilterOptions)[number]>("All");
   const formattedEvents = useMemo(() => events.map(formatBackendEvent), [events]);
+  const filteredEvents = useMemo(
+    () => formattedEvents.filter((event) => matchesEventFilter(event.category, activeFilter)),
+    [activeFilter, formattedEvents]
+  );
 
   return (
     <section className="py-20 md:py-28 bg-muted/5">
       <div className="container mx-auto px-4">
         <SectionHeader title="Featured Events" subtitle="Compete, innovate, and win big across our flagship events." />
+        <div className="flex flex-wrap gap-3 mb-8">
+          {eventFilterOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setActiveFilter(option)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                activeFilter === option
+                  ? "bg-gradient-to-r from-primary to-secondary text-primary-foreground"
+                  : "border border-white/15 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
         <div className="sm:hidden -mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
           <div className="flex gap-4">
-            {formattedEvents.map((event, i) => (
+            {filteredEvents.map((event, i) => (
               <div key={event.id} className="snap-start min-w-[82%] xs:min-w-[70%]">
                 <EventCard event={event} index={i} />
               </div>
@@ -154,10 +183,15 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
           </div>
         </div>
         <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {formattedEvents.slice(0, 3).map((event, i) => (
+          {filteredEvents.slice(0, 3).map((event, i) => (
             <EventCard key={event.id} event={event} index={i} />
           ))}
         </div>
+        {!filteredEvents.length ? (
+          <p className="text-sm text-muted-foreground text-center mt-8">
+            No featured events found for the selected category.
+          </p>
+        ) : null}
         <div className="text-center mt-10">
           <Link to="/events" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-primary/30 text-primary font-heading text-sm font-semibold hover:bg-primary/10 hover:border-primary/60 transition-all">
             View All Events <ChevronRight className="w-4 h-4" />

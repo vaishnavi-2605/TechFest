@@ -50,10 +50,43 @@ function parseEventDate(timeText) {
   return null;
 }
 
+function parseEventDateTime(timeText) {
+  const parsedDate = parseEventDate(timeText);
+  if (!parsedDate) return null;
+
+  const parts = String(timeText || "").split("|").map((part) => part.trim()).filter(Boolean);
+  const timePart = parts[1] || "";
+  if (!timePart) return parsedDate;
+
+  const match = timePart.toLowerCase().match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (!match) return parsedDate;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] || 0);
+  const meridian = match[3];
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes) || minutes > 59) return parsedDate;
+
+  if (meridian) {
+    if (meridian === "pm" && hours < 12) hours += 12;
+    if (meridian === "am" && hours === 12) hours = 0;
+  }
+
+  if (hours > 23) return parsedDate;
+
+  return new Date(
+    parsedDate.getFullYear(),
+    parsedDate.getMonth(),
+    parsedDate.getDate(),
+    hours,
+    minutes
+  );
+}
+
 function isRegistrationClosed(timeText) {
-  const eventDate = parseEventDate(timeText);
-  if (!eventDate) return false;
-  const cutoff = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate() - 1);
+  const eventDateTime = parseEventDateTime(timeText);
+  if (!eventDateTime) return false;
+  const cutoff = new Date(eventDateTime.getTime() - 12 * 60 * 60 * 1000);
   return new Date() >= cutoff;
 }
 
@@ -128,7 +161,7 @@ router.post("/", async (req, res) => {
 
     const effectiveTime = selectedSubEvent?.time || event.time;
     if (isRegistrationClosed(effectiveTime)) {
-      return res.status(400).json({ error: "Registration closed. It is allowed only before one day of event date." });
+      return res.status(400).json({ error: "Registration is closed 12 hours before the event start time." });
     }
 
     const normalizedEmail = String(req.body.email || "").trim().toLowerCase();

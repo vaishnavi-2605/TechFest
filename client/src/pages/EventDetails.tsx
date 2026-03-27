@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import RegisterAction from "@/components/RegisterAction";
 import SectionHeader from "@/components/SectionHeader";
 import { fetchEvent } from "@/data/api";
 import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeLabel } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 import { BadgeCheck, Calendar, Clock, Image as ImageIcon, MapPin, Trophy } from "lucide-react";
+
+function hasNegativeRewardSignal(line: string) {
+  return /(no prize|without prize|prize not available|no certificate|without certificate|certificate not available|no completion certificate|no participation certificate|not applicable|n\/a|none)/i.test(line);
+}
 
 const EventDetailsPage = () => {
   const { eventId = "" } = useParams();
@@ -21,10 +26,18 @@ const EventDetailsPage = () => {
 
   const formatted = useMemo(() => (event ? formatBackendEvent(event) : null), [event]);
   const formattedDescription = useMemo(() => formatDescriptionText(event?.description), [event?.description]);
-  const rewardText = useMemo(() => String(event?.displayPrize || formatted?.prize || "").trim(), [event?.displayPrize, formatted?.prize]);
+  const rewardText = useMemo(() => String(event?.displayPrize || "").trim(), [event?.displayPrize]);
   const rewardLines = useMemo(
     () => rewardText.split("\n").map((line) => line.trim()).filter(Boolean),
     [rewardText]
+  );
+  const prizeLines = useMemo(
+    () => rewardLines.filter((line) => /prize|cash|reward|winner|runner/i.test(line) && !/cert/i.test(line) && !hasNegativeRewardSignal(line)),
+    [rewardLines]
+  );
+  const certificateLines = useMemo(
+    () => rewardLines.filter((line) => /cert|certificate|completion|participation/i.test(line) && !hasNegativeRewardSignal(line)),
+    [rewardLines]
   );
 
   return (
@@ -95,18 +108,28 @@ const EventDetailsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, ease: "easeOut", delay: 0.6 }}
             >
-              {rewardLines.length ? (
-                <div className="rounded-xl border border-white/10 bg-card/30 p-4 space-y-2">
-                  {rewardLines.map((line, index) => {
-                    const isCertificate = /cert/i.test(line);
-                    const Icon = isCertificate ? BadgeCheck : Trophy;
-                    return (
+              {prizeLines.length ? (
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <div className="space-y-2">
+                    {prizeLines.map((line, index) => (
                       <div key={`${line}-${index}`} className="flex items-start gap-2 text-foreground font-semibold">
-                        <Icon className={`w-4 h-4 mt-0.5 ${isCertificate ? "text-emerald-400" : "text-amber-400"}`} />
+                        <Trophy className="w-4 h-4 mt-0.5 text-amber-400" />
                         <span>{line}</span>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {certificateLines.length ? (
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <div className="space-y-2">
+                    {certificateLines.map((line, index) => (
+                      <div key={`${line}-${index}`} className="flex items-start gap-2 text-foreground font-semibold">
+                        <BadgeCheck className="w-4 h-4 mt-0.5 text-emerald-400" />
+                        <span>{line}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -157,9 +180,11 @@ const EventDetailsPage = () => {
               )}
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link to={`/register?eventId=${event.eventId}`} className="px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-center">
-                  Register Now
-                </Link>
+                <RegisterAction
+                  eventId={event.eventId}
+                  timeText={event.time}
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-center"
+                />
                 <Link to="/events" className="px-6 py-3 rounded-lg border border-white/15 text-muted-foreground text-center">
                   Back to Events
                 </Link>

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SectionHeader from "@/components/SectionHeader";
 import { createRegistration, fetchEvent } from "@/data/api";
-import { formatDateLabel, formatTimeLabel, openPrintPassWindow } from "@/data/helpers";
+import { formatDateLabel, formatTimeLabel, isRegistrationClosed, openPrintPassWindow } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 import { Check, ChevronLeft, ChevronRight, Image as ImageIcon, PartyPopper } from "lucide-react";
 
@@ -28,6 +28,8 @@ const RegisterPage = () => {
   const [savedRegistration, setSavedRegistration] = useState<Record<string, string> | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [registrationClosed, setRegistrationClosed] = useState(false);
+  const [showClosedPopup, setShowClosedPopup] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -95,6 +97,17 @@ const RegisterPage = () => {
       .then((data) => setEvent(data.event || null))
       .catch((error) => setStatusMessage(error instanceof Error ? error.message : "Failed to load event."));
   }, [eventId]);
+
+  useEffect(() => {
+    if (!event) return;
+    const closed = isRegistrationClosed(event.time);
+    setRegistrationClosed(closed);
+    if (closed) {
+      setShowClosedPopup(true);
+    } else {
+      setShowClosedPopup(false);
+    }
+  }, [event]);
 
   const isPaidEvent = useMemo(() => Number(event?.fee || 0) > 0, [event]);
 
@@ -164,6 +177,10 @@ const RegisterPage = () => {
 
   function next() {
     setStatusMessage("");
+    if (registrationClosed) {
+      setShowClosedPopup(true);
+      return;
+    }
     if (step === 0 && validateDetails()) setStep(1);
   }
 
@@ -173,6 +190,10 @@ const RegisterPage = () => {
   }
 
   async function submit() {
+    if (registrationClosed) {
+      setShowClosedPopup(true);
+      return;
+    }
     if (!event || !validatePayment()) return;
 
     try {
@@ -216,6 +237,24 @@ const RegisterPage = () => {
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4 max-w-3xl">
         <SectionHeader title="Register" subtitle="Complete details, confirm payment, and generate your pass." />
+
+        {showClosedPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+            <div className="max-w-md w-full rounded-2xl border border-white/10 bg-card/90 p-6 text-center shadow-xl">
+              <h3 className="font-heading text-xl font-bold text-foreground mb-3">Registration Closed</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Registration closes 12 hours before the event. Please contact the coordinator for assistance.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowClosedPopup(false)}
+                className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        )}
 
         {event ? (
             <div className="glass-card p-6 mb-8">
@@ -531,11 +570,19 @@ const RegisterPage = () => {
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
           {step === 0 ? (
-            <button onClick={next} className="flex items-center gap-1 px-6 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold hover:shadow-lg transition-all">
+            <button
+              onClick={next}
+              disabled={registrationClosed}
+              className="flex items-center gap-1 px-6 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-70"
+            >
               Next <ChevronRight className="w-4 h-4" />
             </button>
           ) : step === 1 ? (
-            <button onClick={submit} disabled={submitting} className="px-8 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-70">
+            <button
+              onClick={submit}
+              disabled={submitting || registrationClosed}
+              className="px-8 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-70"
+            >
               {submitting ? "Generating..." : "Generate Pass"}
             </button>
           ) : (

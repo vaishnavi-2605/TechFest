@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Image as ImageIcon, Users, Trophy, Clock } from "lucide-react";
+import RegisterAction from "@/components/RegisterAction";
 import { formatDescriptionText } from "@/data/helpers";
 import { Event } from "@/types";
 
@@ -57,12 +58,12 @@ const EventCard = ({ event, index }: { event: Event; index: number }) => {
         >
           View Details
         </Link>
-        <Link
-          to={event.eventId ? `/register?eventId=${event.eventId}` : "/register"}
+        <RegisterAction
+          eventId={event.eventId}
+          timeText={event.time}
+          label="Register"
           className="py-2.5 px-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground text-sm font-semibold text-center"
-        >
-          Register
-        </Link>
+        />
       </div>
     </motion.div>
   );

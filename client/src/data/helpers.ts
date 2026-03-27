@@ -63,6 +63,47 @@ export function formatTimeLabel(timeText?: string) {
   return parts[1] || parts[0] || "To be announced";
 }
 
+export function parseEventDateTime(timeText?: string) {
+  const parsedDate = parseEventDate(timeText);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+
+  const parts = String(timeText || "").split("|").map((x) => x.trim()).filter(Boolean);
+  const timePart = parts[1] || "";
+  if (!timePart) return null;
+
+  const match = timePart.toLowerCase().match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (!match) return parsedDate;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] || 0);
+  const meridian = match[3];
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes) || minutes > 59) return parsedDate;
+
+  if (meridian) {
+    if (meridian === "pm" && hours < 12) hours += 12;
+    if (meridian === "am" && hours === 12) hours = 0;
+  }
+
+  if (hours > 23) return parsedDate;
+
+  return new Date(
+    parsedDate.getFullYear(),
+    parsedDate.getMonth(),
+    parsedDate.getDate(),
+    hours,
+    minutes,
+  );
+}
+
+export function isRegistrationClosed(timeText?: string, now = new Date()) {
+  const eventDateTime = parseEventDateTime(timeText);
+  if (!eventDateTime || Number.isNaN(eventDateTime.getTime())) return false;
+
+  const closeTime = new Date(eventDateTime.getTime() - 12 * 60 * 60 * 1000);
+  return now >= closeTime;
+}
+
 export function formatDescriptionText(description?: string) {
   const raw = String(description || "").trim();
   if (!raw) return "";
