@@ -34,7 +34,7 @@ const EventsPage = () => {
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4">
         <SectionHeader title="All Events" subtitle="Explore our complete lineup of competitions, workshops, and more." />
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
           {eventFilterOptions.map((option) => (
             <button
               key={option}
@@ -51,22 +51,23 @@ const EventsPage = () => {
           ))}
         </div>
 
-        <motion.div
-          key={activeFilter}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredEvents.map((event, i) => (
-            <EventCard key={event.id} event={event} index={i} />
-          ))}
-        </motion.div>
         {!filteredEvents.length ? (
           <p className="text-sm text-muted-foreground text-center mt-8">
             No events found for the selected category.
           </p>
-        ) : null}
+        ) : (
+          <motion.div
+            key={activeFilter}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {filteredEvents.map((event, i) => (
+              <EventCard key={event.id} event={event} index={i} />
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );

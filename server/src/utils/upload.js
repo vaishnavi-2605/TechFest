@@ -7,18 +7,8 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    const safeExt = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"].includes(ext) ? ext : ".jpg";
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${unique}${safeExt}`);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ok = /image\/(jpeg|jpg|png|webp|gif|svg\+xml)/.test(file.mimetype || "");
@@ -26,10 +16,24 @@ const upload = multer({
   }
 });
 
-function fileToPublicUrl(req, file) {
-  if (!file) return "";
-  const base = `${req.protocol}://${req.get("host")}`;
-  return `${base}/uploads/${file.filename}`;
+function getSafeExtension(file) {
+  const ext = path.extname(file?.originalname || "").toLowerCase();
+  return [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"].includes(ext) ? ext : ".jpg";
 }
 
-module.exports = { upload, fileToPublicUrl, uploadDir };
+function saveFileLocally(file) {
+  if (!file?.buffer) return "";
+
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${getSafeExtension(file)}`;
+  const fullPath = path.join(uploadDir, filename);
+  fs.writeFileSync(fullPath, file.buffer);
+  return filename;
+}
+
+function fileToPublicUrl(req, filename) {
+  if (!filename) return "";
+  const base = `${req.protocol}://${req.get("host")}`;
+  return `${base}/uploads/${filename}`;
+}
+
+module.exports = { upload, uploadDir, saveFileLocally, fileToPublicUrl };

@@ -6,6 +6,7 @@ import ParticleBackground from "@/components/ParticleBackground";
 import CountdownTimer from "@/components/CountdownTimer";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { sponsors } from "@/data/sampleData";
 import { fetchEvents } from "@/data/api";
 import { formatBackendEvent, formatDateLabel, parseEventDate } from "@/data/helpers";
@@ -157,7 +158,7 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
     <section className="py-20 md:py-28 bg-muted/5">
       <div className="container mx-auto px-4">
         <SectionHeader title="Featured Events" subtitle="Compete, innovate, and win big across our flagship events." />
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
           {eventFilterOptions.map((option) => (
             <button
               key={option}
@@ -173,25 +174,28 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
             </button>
           ))}
         </div>
-        <div className="sm:hidden -mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-smooth">
-          <div className="flex gap-4">
-            {filteredEvents.map((event, i) => (
-              <div key={event.id} className="snap-start min-w-[82%] xs:min-w-[70%]">
-                <EventCard event={event} index={i} />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.slice(0, 3).map((event, i) => (
-            <EventCard key={event.id} event={event} index={i} />
-          ))}
-        </div>
         {!filteredEvents.length ? (
           <p className="text-sm text-muted-foreground text-center mt-8">
             No featured events found for the selected category.
           </p>
-        ) : null}
+        ) : (
+          <div className="max-w-6xl mx-auto px-0 sm:px-12">
+            <Carousel
+              opts={{ align: "start" }}
+              className="w-full"
+            >
+              <CarouselContent>
+                {filteredEvents.map((event, i) => (
+                  <CarouselItem key={event.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                    <EventCard event={event} index={i} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-0 top-[42%] hidden sm:inline-flex border-white/15 bg-background/80 text-foreground hover:bg-background" />
+              <CarouselNext className="right-0 top-[42%] hidden sm:inline-flex border-white/15 bg-background/80 text-foreground hover:bg-background" />
+            </Carousel>
+          </div>
+        )}
         <div className="text-center mt-10">
           <Link to="/events" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-primary/30 text-primary font-heading text-sm font-semibold hover:bg-primary/10 hover:border-primary/60 transition-all">
             View All Events <ChevronRight className="w-4 h-4" />

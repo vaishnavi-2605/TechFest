@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const { requireAuth, requireRole } = require("../middleware/auth");
-const { upload, fileToPublicUrl } = require("../utils/upload");
+const { upload } = require("../utils/upload");
+const { uploadImage } = require("../utils/cloudinary");
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
     }
 
     const passwordHash = await bcrypt.hash(plainPassword, 10);
-    const uploadedPhotoUrl = fileToPublicUrl(req, req.file);
+    const uploadedPhotoUrl = await uploadImage(req.file, "techfest/coordinators", req);
 
     const existingInactive = existingByEmail || existingByUsername;
     let user = existingInactive;
@@ -95,8 +96,8 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
         photoUrl: user.photoUrl || ""
       }
     });
-  } catch (_error) {
-    return res.status(500).json({ error: "Failed to register coordinator." });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || "Failed to register coordinator." });
   }
 });
 

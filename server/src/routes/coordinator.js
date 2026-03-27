@@ -5,7 +5,8 @@ const User = require("../models/User");
 const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const { requireAuth, requireRole } = require("../middleware/auth");
-const { upload, fileToPublicUrl } = require("../utils/upload");
+const { upload } = require("../utils/upload");
+const { uploadImage } = require("../utils/cloudinary");
 
 const router = express.Router();
 
@@ -99,11 +100,11 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
       }
     }
 
-    const uploadedPhotoUrl = fileToPublicUrl(req, req.files?.photo?.[0]);
+    const uploadedPhotoUrl = await uploadImage(req.files?.photo?.[0], "techfest/coordinators", req);
     if (uploadedPhotoUrl) coordinator.photoUrl = uploadedPhotoUrl;
     else if (photoUrl !== undefined) coordinator.photoUrl = String(photoUrl || "").trim();
 
-    const uploadedPaymentQrUrl = fileToPublicUrl(req, req.files?.paymentQr?.[0]);
+    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
     if (uploadedPaymentQrUrl) coordinator.paymentQrUrl = uploadedPaymentQrUrl;
     else if (paymentQrUrl !== undefined) coordinator.paymentQrUrl = String(paymentQrUrl || "").trim();
 
@@ -123,8 +124,8 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
         paymentQrUrl: coordinator.paymentQrUrl || ""
       }
     });
-  } catch (_error) {
-    return res.status(500).json({ error: "Failed to update profile." });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || "Failed to update profile." });
   }
 });
 
@@ -208,8 +209,8 @@ router.post("/events", upload.fields([
       }
     }
 
-    const uploadedPosterUrl = fileToPublicUrl(req, req.files?.poster?.[0]);
-    const uploadedPaymentQrUrl = fileToPublicUrl(req, req.files?.paymentQr?.[0]);
+    const uploadedPosterUrl = await uploadImage(req.files?.poster?.[0], "techfest/posters", req);
+    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
     const finalFee = Number(fee || 0);
     const normalizedTeamSize = Math.max(1, Number(teamSize || 1));
     const derivedIsTeamEvent = normalizedTeamSize > 1;
@@ -259,8 +260,8 @@ router.post("/events", upload.fields([
       message: "Event added and sent for admin approval.",
       event
     });
-  } catch (_error) {
-    return res.status(500).json({ error: "Failed to add event." });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || "Failed to add event." });
   }
 });
 
@@ -327,8 +328,8 @@ router.put("/events/:id", upload.fields([
       event.rules = parsedRules;
     }
 
-    const uploadedPosterUrl = fileToPublicUrl(req, req.files?.poster?.[0]);
-    const uploadedPaymentQrUrl = fileToPublicUrl(req, req.files?.paymentQr?.[0]);
+    const uploadedPosterUrl = await uploadImage(req.files?.poster?.[0], "techfest/posters", req);
+    const uploadedPaymentQrUrl = await uploadImage(req.files?.paymentQr?.[0], "techfest/payment-qr", req);
     if (uploadedPosterUrl) event.posterUrl = String(uploadedPosterUrl).trim();
     else if (posterUrl !== undefined) event.posterUrl = String(posterUrl || "").trim();
 
@@ -345,8 +346,8 @@ router.put("/events/:id", upload.fields([
     await event.save();
 
     return res.json({ message: "Event updated and sent for admin approval.", event });
-  } catch (_error) {
-    return res.status(500).json({ error: "Failed to update event." });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || "Failed to update event." });
   }
 });
 
