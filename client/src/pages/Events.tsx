@@ -7,6 +7,7 @@ import { formatBackendEvent } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 
 const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
+const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
 
 function matchesEventFilter(category: string, filter: (typeof eventFilterOptions)[number]) {
   if (filter === "All") return true;
@@ -14,14 +15,34 @@ function matchesEventFilter(category: string, filter: (typeof eventFilterOptions
   return category === filter;
 }
 
+function readCachedEvents() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(EVENTS_CACHE_KEY) || "null") as { events?: BackendEvent[] } | null;
+    return Array.isArray(cached?.events) ? cached.events : [];
+  } catch {
+    return [];
+  }
+}
+
 const EventsPage = () => {
-  const [events, setEvents] = useState<BackendEvent[]>([]);
+  const [events, setEvents] = useState<BackendEvent[]>(() => readCachedEvents());
   const [activeFilter, setActiveFilter] = useState<(typeof eventFilterOptions)[number]>("All");
+  const [loading, setLoading] = useState(events.length === 0);
 
   useEffect(() => {
+    setLoading(true);
     fetchEvents()
-      .then((data) => setEvents(data.events || []))
-      .catch(() => setEvents([]));
+      .then((data) => {
+        const nextEvents = data.events || [];
+        setEvents(nextEvents);
+        sessionStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify({ events: nextEvents }));
+      })
+      .catch(() => {
+        setEvents((current) => (current.length ? current : []));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const formattedEvents = useMemo(() => events.map(formatBackendEvent), [events]);
@@ -51,7 +72,11 @@ const EventsPage = () => {
           ))}
         </div>
 
-        {!filteredEvents.length ? (
+        {loading && !events.length ? (
+          <p className="text-sm text-muted-foreground text-center mt-8">
+            Loading events...
+          </p>
+        ) : !filteredEvents.length ? (
           <p className="text-sm text-muted-foreground text-center mt-8">
             No events found for the selected category.
           </p>

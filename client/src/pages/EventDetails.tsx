@@ -8,20 +8,58 @@ import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeL
 import { BackendEvent } from "@/types";
 import { BadgeCheck, Calendar, Clock, Image as ImageIcon, MapPin, Trophy } from "lucide-react";
 
+const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
+const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:";
+
 function hasNegativeRewardSignal(line: string) {
   return /(no prize|without prize|prize not available|no certificate|without certificate|certificate not available|no completion certificate|no participation certificate|not applicable|n\/a|none)/i.test(line);
 }
 
+function readCachedEvent(eventId: string) {
+  if (typeof window === "undefined" || !eventId) return null;
+
+  try {
+    const detailsCache = JSON.parse(sessionStorage.getItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`) || "null") as { event?: BackendEvent | null } | null;
+    if (detailsCache?.event?.eventId === eventId) return detailsCache.event;
+  } catch {
+    // ignore malformed cache
+  }
+
+  try {
+    const eventsCache = JSON.parse(sessionStorage.getItem(EVENTS_CACHE_KEY) || "null") as { events?: BackendEvent[] } | null;
+    const match = (eventsCache?.events || []).find((item) => item?.eventId === eventId);
+    return match || null;
+  } catch {
+    return null;
+  }
+}
+
 const EventDetailsPage = () => {
   const { eventId = "" } = useParams();
-  const [event, setEvent] = useState<BackendEvent | null>(null);
+  const [event, setEvent] = useState<BackendEvent | null>(() => readCachedEvent(eventId));
   const [alert, setAlert] = useState("");
   const [previewPoster, setPreviewPoster] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!readCachedEvent(eventId));
 
   useEffect(() => {
+    const cached = readCachedEvent(eventId);
+    if (cached) {
+      setEvent(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     fetchEvent(eventId)
-      .then((data) => setEvent(data.event || null))
-      .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load event."));
+      .then((data) => {
+        const nextEvent = data.event || null;
+        setEvent(nextEvent);
+        if (nextEvent) {
+          sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+        }
+      })
+      .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load event."))
+      .finally(() => setLoading(false));
   }, [eventId]);
 
   const formatted = useMemo(() => (event ? formatBackendEvent(event) : null), [event]);
@@ -46,6 +84,7 @@ const EventDetailsPage = () => {
         <SectionHeader title="Event Details" subtitle="View the full event information and poster." />
 
         {!!alert && <p className="text-sm text-destructive mb-4">{alert}</p>}
+        {loading && !event ? <p className="text-sm text-muted-foreground mb-4">Loading event details...</p> : null}
 
         {event && formatted ? (
           <>

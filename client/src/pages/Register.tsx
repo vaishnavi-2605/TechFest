@@ -7,6 +7,8 @@ import { formatDateLabel, formatTimeLabel, isRegistrationClosed, openPrintPassWi
 import { BackendEvent } from "@/types";
 import { Check, ChevronLeft, ChevronRight, Image as ImageIcon, PartyPopper } from "lucide-react";
 
+const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
+const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:";
 const steps = ["Participant Details", "Payment", "Pass"];
 const departmentOptions = [
   "Computer Engineering",
@@ -20,16 +22,36 @@ const departmentOptions = [
   "Other",
 ];
 
+function readCachedEvent(eventId: string) {
+  if (typeof window === "undefined" || !eventId) return null;
+
+  try {
+    const detailsCache = JSON.parse(sessionStorage.getItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`) || "null") as { event?: BackendEvent | null } | null;
+    if (detailsCache?.event?.eventId === eventId) return detailsCache.event;
+  } catch {
+    // ignore malformed cache
+  }
+
+  try {
+    const eventsCache = JSON.parse(sessionStorage.getItem(EVENTS_CACHE_KEY) || "null") as { events?: BackendEvent[] } | null;
+    const match = (eventsCache?.events || []).find((item) => item?.eventId === eventId);
+    return match || null;
+  } catch {
+    return null;
+  }
+}
+
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get("eventId") || "";
   const [step, setStep] = useState(0);
-  const [event, setEvent] = useState<BackendEvent | null>(null);
+  const [event, setEvent] = useState<BackendEvent | null>(() => readCachedEvent(eventId));
   const [savedRegistration, setSavedRegistration] = useState<Record<string, string> | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [registrationClosed, setRegistrationClosed] = useState(false);
   const [showClosedPopup, setShowClosedPopup] = useState(false);
+  const [loadingEvent, setLoadingEvent] = useState(!readCachedEvent(eventId));
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -93,9 +115,24 @@ const RegisterPage = () => {
 
   useEffect(() => {
     if (!eventId) return;
+    const cached = readCachedEvent(eventId);
+    if (cached) {
+      setEvent(cached);
+      setLoadingEvent(false);
+    } else {
+      setLoadingEvent(true);
+    }
+
     fetchEvent(eventId)
-      .then((data) => setEvent(data.event || null))
-      .catch((error) => setStatusMessage(error instanceof Error ? error.message : "Failed to load event."));
+      .then((data) => {
+        const nextEvent = data.event || null;
+        setEvent(nextEvent);
+        if (nextEvent) {
+          sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+        }
+      })
+      .catch((error) => setStatusMessage(error instanceof Error ? error.message : "Failed to load event."))
+      .finally(() => setLoadingEvent(false));
   }, [eventId]);
 
   useEffect(() => {
@@ -293,6 +330,9 @@ const RegisterPage = () => {
               </div>
             </div>
           </div>
+        ) : null}
+        {loadingEvent && !event ? (
+          <p className="text-sm text-muted-foreground mb-6 text-center">Loading event details...</p>
         ) : null}
 
         <div className="flex items-center justify-between mb-10">
