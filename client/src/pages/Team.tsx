@@ -19,7 +19,7 @@ const TeamPage = () => {
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4">
-        <SectionHeader title="Our Team" subtitle="The brilliant minds behind NEXUS 2025." />
+        <SectionHeader title="Our Team" subtitle="The brilliant minds behind TechFest 2025." />
 
         {!!alert && <p className="text-sm text-destructive mb-4 text-center">{alert}</p>}
 

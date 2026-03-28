@@ -237,7 +237,7 @@ export function openPrintPassWindow(passData: {
     </head>
     <body>
       <div class="pass">
-        <h1>NEXUS 2026 Event Pass</h1>
+        <h1>TechFest 2026 Event Pass</h1>
         <p class="id">Registration ID: ${passData.registrationId}</p>
         <p><strong>Name:</strong> ${passData.fullName}</p>
         <p><strong>Event:</strong> ${passData.eventName}</p>

@@ -13,7 +13,7 @@ const SponsorsPage = () => {
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4">
-        <SectionHeader title="Sponsors" subtitle="NEXUS 2026 is powered by these incredible partners." />
+        <SectionHeader title="Sponsors" subtitle="TechFest 2026 is powered by these incredible partners." />
 
         {tiers.map((tier) => {
           const items = sponsors.filter((s) => s.tier === tier);

@@ -14,11 +14,24 @@ import { BackendEvent } from "@/types";
 import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-react";
 
 const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
+const NEXT_EVENT_STORAGE_KEY = "techfestNextEventTime";
 
 function matchesEventFilter(category: string, filter: (typeof eventFilterOptions)[number]) {
   if (filter === "All") return true;
   if (filter === "Workshop") return category === "Workshops";
   return category === filter;
+}
+
+function getLatestEventTime(rows: BackendEvent[]) {
+  return rows
+    .map((event) => ({ raw: event.time, parsed: parseEventDate(event.time) }))
+    .filter((event) => event.raw && !Number.isNaN(event.parsed.getTime()))
+    .sort((a, b) => b.parsed.getTime() - a.parsed.getTime())[0]?.raw || "";
+}
+
+function getStoredNextEventTime() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(NEXT_EVENT_STORAGE_KEY) || "";
 }
 
 const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
@@ -79,7 +92,7 @@ const HeroSection = ({ nextEventDate, nextEventTimeText }: { nextEventDate: stri
             animation: "gradient-shift 4s linear infinite",
           }}
         >
-          NEXUS 2026
+          TechFest 2026
         </motion.h1>
 
         <motion.p variants={item} className="text-muted-foreground text-base md:text-lg mb-2">
@@ -112,13 +125,13 @@ const AboutSection = ({ stats }: { stats: { label: string; value: number; icon: 
   return (
     <section className="py-20 md:py-28 relative" ref={ref}>
       <div className="container mx-auto px-4">
-        <SectionHeader title="About NEXUS" subtitle="A day of innovation, competition, and celebration of technology." />
+        <SectionHeader title="About TechFest" subtitle="A day of innovation, competition, and celebration of technology." />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, x: -30 }} animate={inView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.6 }}>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              NEXUS 2026 is the annual techfest of KBT College of Engineering, Nashik — a two-day extravaganza bringing
+              TechFest 2026 is the annual techfest of KBT College of Engineering, Nashik — a two-day extravaganza bringing
               together the brightest minds from colleges across India. With over 10 events spanning hackathons,
-              robotics, AI, design, and more, NEXUS is where innovation meets imagination.
+              robotics, AI, design, and more, TechFest is where innovation meets imagination.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Whether you're a coder, a designer, a robotics enthusiast, or a quiz master, there's something for everyone.
@@ -231,37 +244,25 @@ const SponsorsStrip = () => {
 
 const Index = () => {
   const [events, setEvents] = useState<BackendEvent[]>([]);
+  const [latestEventTimeText, setLatestEventTimeText] = useState(() => getStoredNextEventTime());
 
   useEffect(() => {
     fetchEvents()
       .then((data) => {
         const rows = data.events || [];
         setEvents(rows);
-        const latest = rows
-          .map((event) => ({ raw: event.time, parsed: parseEventDate(event.time) }))
-          .filter((event) => !Number.isNaN(event.parsed.getTime()))
-          .sort((a, b) => b.parsed.getTime() - a.parsed.getTime())[0];
-        if (latest?.raw) localStorage.setItem("techfestNextEventTime", latest.raw);
+        const latest = getLatestEventTime(rows);
+        if (latest) {
+          setLatestEventTimeText(latest);
+          localStorage.setItem(NEXT_EVENT_STORAGE_KEY, latest);
+        }
       })
       .catch(() => setEvents([]));
   }, []);
 
   const latestEventDateLabel = useMemo(() => {
-    const latest = events
-      .map((event) => ({ raw: event.time, parsed: parseEventDate(event.time) }))
-      .filter((event) => !Number.isNaN(event.parsed.getTime()))
-      .sort((a, b) => b.parsed.getTime() - a.parsed.getTime())[0];
-
-    return latest?.raw ? formatDateLabel(latest.raw) : "";
-  }, [events]);
-
-  const latestEventTimeText = useMemo(() => {
-    const latest = events
-      .map((event) => ({ raw: event.time, parsed: parseEventDate(event.time) }))
-      .filter((event) => !Number.isNaN(event.parsed.getTime()))
-      .sort((a, b) => b.parsed.getTime() - a.parsed.getTime())[0];
-    return latest?.raw || "";
-  }, [events]);
+    return latestEventTimeText ? formatDateLabel(latestEventTimeText) : "";
+  }, [latestEventTimeText]);
 
   const stats = [
     { label: "Events", value: events.length, icon: Sparkles },

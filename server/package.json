@@ -1,10 +1,10 @@
 {
-  "name": "techfest-nexus-server",
+  "name": "techfest-server",
   "version": "1.0.0",
   "private": true,
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
+    "dev": "nodemon --exec \"node -r dotenv/config src/index.js dotenv_config_path=.env.local\"",
     "start": "node src/index.js"
   },
   "dependencies": {

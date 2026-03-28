@@ -37,7 +37,7 @@ const Navbar = () => {
         <Link to="/" className="flex items-center gap-2 group">
           <Zap className="w-7 h-7 text-primary transition-all group-hover:drop-shadow-[0_0_8px_hsl(263,84%,58%)]" />
           <span className="font-heading text-xl font-bold tracking-wider gradient-text">
-            NEXUS
+            TechFest
           </span>
         </Link>
 

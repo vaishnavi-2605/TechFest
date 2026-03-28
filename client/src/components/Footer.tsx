@@ -11,7 +11,7 @@ const Footer = () => {
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-6 h-6 text-primary" />
-              <span className="font-heading text-lg font-bold gradient-text">NEXUS 2026</span>
+              <span className="font-heading text-lg font-bold gradient-text">TechFest 2026</span>
             </div>
             <p className="text-sm text-muted-foreground">
               KBT College of Engineering, Nashik
@@ -32,7 +32,7 @@ const Footer = () => {
 
           <div>
             <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Contact</h4>
-            <p className="text-sm text-muted-foreground">nexus@mitcoe.edu.in</p>
+            <p className="text-sm text-muted-foreground">techfest@mitcoe.edu.in</p>
             <p className="text-sm text-muted-foreground mt-1">+91 98765 43210</p>
           </div>
 
@@ -62,7 +62,7 @@ const Footer = () => {
 
         <div className="mt-10 pt-6 border-t border-border flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            © 2026 NEXUS — KBT College of Engineering, Nashik. All rights reserved.
+            © 2026 TechFest — KBT College of Engineering, Nashik. All rights reserved.
           </p>
           <button
             onClick={scrollToTop}

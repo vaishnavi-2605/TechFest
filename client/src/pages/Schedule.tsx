@@ -17,7 +17,7 @@ const SchedulePage = () => {
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4 max-w-3xl">
-        <SectionHeader title="Schedule" subtitle="Plan your two days at NEXUS 2026." />
+        <SectionHeader title="Schedule" subtitle="Plan your two days at TechFest 2026." />
 
         <div className="flex justify-center gap-4 mb-12">
           {[1, 2].map((day) => (

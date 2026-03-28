@@ -1,4 +1,4 @@
-# TechFest Nexus (React + Express + MongoDB)
+# TechFest (React + Express + MongoDB)
 
 This project uses a full-stack setup:
 

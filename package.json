@@ -1,8 +1,8 @@
 {
-  "name": "techfest-nexus",
+  "name": "techfest",
   "version": "2.0.0",
   "private": true,
-  "description": "TechFest Nexus full-stack app (React + Express + MongoDB)",
+  "description": "TechFest full-stack app (React + Express + MongoDB)",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:client": "npm run dev --prefix client",

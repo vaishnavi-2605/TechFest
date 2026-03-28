@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: techfest-nexus-api
+    name: techfest-api
     runtime: node
     plan: free
     region: singapore
@@ -32,7 +32,7 @@ services:
         value: "false"
 
   - type: web
-    name: techfest-nexus-client
+    name: techfest-client
     runtime: static
     plan: free
     rootDir: client
