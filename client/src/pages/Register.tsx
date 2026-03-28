@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SectionHeader from "@/components/SectionHeader";
 import { createRegistration, fetchEvent } from "@/data/api";
-import { formatDateLabel, formatTimeLabel, isRegistrationClosed, openPrintPassWindow } from "@/data/helpers";
+import { formatDateLabel, formatTimeLabel, isRegistrationClosed, openPrintPassWindow, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 import { Check, ChevronLeft, ChevronRight, Image as ImageIcon, PartyPopper } from "lucide-react";
 
@@ -261,8 +261,8 @@ const RegisterPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-6 items-stretch">
               <div>
                 <div className="w-full h-52 md:h-60 rounded-xl border border-white/10 overflow-hidden bg-card/40 p-2">
-                  {event.posterUrl ? (
-                    <img src={event.posterUrl} alt={event.title} className="w-full h-full object-contain" />
+                  {resolveApiAssetUrl(event.posterUrl) ? (
+                    <img src={resolveApiAssetUrl(event.posterUrl)} alt={event.title} className="w-full h-full object-contain" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
                       <ImageIcon className="w-6 h-6" />
@@ -485,8 +485,8 @@ const RegisterPage = () => {
                   {isPaidEvent ? (
                     <>
                       <p className="text-sm text-muted-foreground mb-3">Pay <strong>₹ {event.fee}</strong> for this event and enter the payment reference/UTR below.</p>
-                      {event.paymentQrUrl ? (
-                        <img src={event.paymentQrUrl} alt="Payment QR" className="w-44 h-44 object-contain rounded-xl border border-white/10 bg-white p-2 mb-4" />
+                      {resolveApiAssetUrl(event.paymentQrUrl) ? (
+                        <img src={resolveApiAssetUrl(event.paymentQrUrl)} alt="Payment QR" className="w-44 h-44 object-contain rounded-xl border border-white/10 bg-white p-2 mb-4" />
                       ) : (
                         <div className="w-44 h-44 rounded-xl border border-dashed border-white/15 bg-card/30 grid place-items-center text-muted-foreground mb-4">
                           Payment QR not uploaded

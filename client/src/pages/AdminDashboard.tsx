@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import { fetchAdminCoordinators, fetchAdminUnreadMessageCount, updateAdminEventStatus } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
+import { resolveApiAssetUrl } from "@/data/helpers";
+
+const ADMIN_DASHBOARD_CACHE_KEY = "techfestAdminDashboardCache";
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -10,11 +13,37 @@ const AdminDashboardPage = () => {
   const [unread, setUnread] = useState(0);
   const [alert, setAlert] = useState("");
   const [updatingEventId, setUpdatingEventId] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  function hydrateFromCache() {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(ADMIN_DASHBOARD_CACHE_KEY) || "null") as
+        | { coordinators?: Record<string, unknown>[]; unread?: number }
+        | null;
+      if (!cached) return false;
+      setCoordinators(cached.coordinators || []);
+      setUnread(Number(cached.unread || 0));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   async function loadDashboard() {
-    const [coordinatorData, unreadData] = await Promise.all([fetchAdminCoordinators(), fetchAdminUnreadMessageCount()]);
-    setCoordinators(coordinatorData.coordinators || []);
-    setUnread(Number(unreadData.unreadCount || 0));
+    setLoading(true);
+    try {
+      const [coordinatorData, unreadData] = await Promise.all([fetchAdminCoordinators(), fetchAdminUnreadMessageCount()]);
+      const nextCoordinators = coordinatorData.coordinators || [];
+      const nextUnread = Number(unreadData.unreadCount || 0);
+      setCoordinators(nextCoordinators);
+      setUnread(nextUnread);
+      sessionStorage.setItem(ADMIN_DASHBOARD_CACHE_KEY, JSON.stringify({
+        coordinators: nextCoordinators,
+        unread: nextUnread
+      }));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -25,6 +54,7 @@ const AdminDashboardPage = () => {
       return;
     }
 
+    hydrateFromCache();
     loadDashboard()
       .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load dashboard."));
   }, [navigate]);
@@ -65,6 +95,9 @@ const AdminDashboardPage = () => {
 
         <section className="glass-card p-6">
           <h2 className="font-heading text-lg font-bold text-foreground mb-4">Coordinators</h2>
+          {loading && !coordinators.length ? (
+            <p className="text-sm text-muted-foreground mb-4">Loading dashboard...</p>
+          ) : null}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
           {coordinators.map((row) => {
             const item = row as {
@@ -85,8 +118,8 @@ const AdminDashboardPage = () => {
                 key={item.id}
                 className="glass-card p-6 card-hover-glow flex flex-col h-full"
               >
-                {item.photoUrl ? (
-                  <img src={item.photoUrl} alt={item.name} className="w-full h-44 object-cover rounded-xl border border-white/10 mb-4" />
+                {resolveApiAssetUrl(item.photoUrl) ? (
+                  <img src={resolveApiAssetUrl(item.photoUrl)} alt={item.name} className="w-full h-44 object-cover rounded-xl border border-white/10 mb-4" />
                 ) : (
                   <div className="w-full h-44 rounded-xl border border-white/10 bg-card/40 mb-4 flex items-center justify-center text-muted-foreground">
                     No Photo

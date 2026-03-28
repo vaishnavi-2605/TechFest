@@ -1,5 +1,7 @@
 import { BackendEvent, Event, ScheduleItem } from "@/types";
 
+const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
 const MONTH_MAP: Record<string, number> = {
   jan: 0, january: 0,
   feb: 1, february: 1,
@@ -114,6 +116,32 @@ export function formatDescriptionText(description?: string) {
   return text.replace(/\n{2,}/g, "\n").trim();
 }
 
+export function resolveApiAssetUrl(value?: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw);
+      if (url.pathname.startsWith("/api/images/") || url.pathname.startsWith("/uploads/")) {
+        return API_BASE ? `${API_BASE}${url.pathname}${url.search}` : `${url.pathname}${url.search}`;
+      }
+      return raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  if (raw.startsWith("/")) {
+    return API_BASE ? `${API_BASE}${raw}` : raw;
+  }
+
+  const normalizedPath = raw.replace(/^\/+/, "");
+  return API_BASE ? `${API_BASE}/${normalizedPath}` : `/${normalizedPath}`;
+}
+
 export function getCategoryFromDepartment(department?: string): Event["category"] {
   const value = String(department || "").toLowerCase();
   if (value.includes("computer") || value.includes("ai") || value.includes("data") || value.includes("electronics") || value.includes("electrical") || value.includes("mechanical")) {
@@ -145,7 +173,7 @@ export function formatBackendEvent(event: BackendEvent): Event {
     deadline: event.displayDeadline || (deadline
       ? deadline.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
       : "Open"),
-    posterUrl: event.posterUrl || "",
+    posterUrl: resolveApiAssetUrl(event.posterUrl),
     department: event.department,
     fee: event.fee,
     address: event.address,

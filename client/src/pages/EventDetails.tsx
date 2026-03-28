@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import RegisterAction from "@/components/RegisterAction";
 import SectionHeader from "@/components/SectionHeader";
 import { fetchEvent } from "@/data/api";
-import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeLabel } from "@/data/helpers";
+import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeLabel, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 import { BadgeCheck, Calendar, Clock, Image as ImageIcon, MapPin, Trophy } from "lucide-react";
 
@@ -65,17 +65,17 @@ const EventDetailsPage = () => {
 
             <div className="space-y-6">
             <div className="max-w-4xl mx-auto">
-              {formatted.posterUrl ? (
+              {resolveApiAssetUrl(formatted.posterUrl) ? (
                 <motion.button
                   type="button"
-                  onClick={() => setPreviewPoster(formatted.posterUrl || null)}
+                  onClick={() => setPreviewPoster(resolveApiAssetUrl(formatted.posterUrl) || null)}
                   className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-2xl"
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
                 >
                   <img
-                    src={formatted.posterUrl}
+                    src={resolveApiAssetUrl(formatted.posterUrl)}
                     alt={formatted.name}
                     className="w-full max-h-[420px] md:max-h-[520px] object-contain"
                   />

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Image as ImageIcon, Users, Trophy, Clock } from "lucide-react";
 import RegisterAction from "@/components/RegisterAction";
-import { formatDescriptionText } from "@/data/helpers";
+import { formatDescriptionText, resolveApiAssetUrl } from "@/data/helpers";
 import { Event } from "@/types";
 
 const categoryColors = {
@@ -24,9 +24,9 @@ const EventCard = ({ event, index }: { event: Event; index: number }) => {
       className="glass-card card-hover-glow p-6 flex flex-col gap-4 group h-full"
     >
       <div className="w-full h-48 rounded-xl border border-white/10 overflow-hidden bg-card/40">
-        {event.posterUrl ? (
+        {resolveApiAssetUrl(event.posterUrl) ? (
           <img
-            src={event.posterUrl}
+            src={resolveApiAssetUrl(event.posterUrl)}
             alt={event.name}
             className="w-full h-full object-cover"
           />

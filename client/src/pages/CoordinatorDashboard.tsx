@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import { Image as ImageIcon, Search } from "lucide-react";
-import { parseEventDate } from "@/data/helpers";
+import { parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
 import { deleteCoordinatorEvent, fetchCoordinatorMe, fetchCoordinatorParticipants, markCoordinatorNotificationsRead } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
+
+const COORDINATOR_DASHBOARD_CACHE_KEY = "techfestCoordinatorDashboardCache";
 
 type CoordinatorProfile = {
   id?: string;
@@ -50,19 +52,47 @@ const CoordinatorDashboardPage = () => {
   const [alert, setAlert] = useState("");
   const [participantQuery, setParticipantQuery] = useState("");
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  function hydrateFromCache() {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(COORDINATOR_DASHBOARD_CACHE_KEY) || "null") as
+        | { profile?: CoordinatorProfile | null; events?: CoordinatorEvent[]; participants?: ParticipantRow[] }
+        | null;
+      if (!cached) return false;
+      setProfile(cached.profile || null);
+      setEvents(cached.events || []);
+      setParticipants(cached.participants || []);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   async function load() {
-    const [me, participantData] = await Promise.all([fetchCoordinatorMe(), fetchCoordinatorParticipants()]);
-    const coordinator = (me.coordinator || null) as CoordinatorProfile | null;
-    setProfile(coordinator);
-    setEvents((me.events || []) as CoordinatorEvent[]);
-    setParticipants((participantData.participants || []) as ParticipantRow[]);
+    setLoading(true);
+    try {
+      const [me, participantData] = await Promise.all([fetchCoordinatorMe(), fetchCoordinatorParticipants()]);
+      const coordinator = (me.coordinator || null) as CoordinatorProfile | null;
+      const nextEvents = (me.events || []) as CoordinatorEvent[];
+      const nextParticipants = (participantData.participants || []) as ParticipantRow[];
+      setProfile(coordinator);
+      setEvents(nextEvents);
+      setParticipants(nextParticipants);
+      sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
+        profile: coordinator,
+        events: nextEvents,
+        participants: nextParticipants
+      }));
 
-    const notifications = coordinator?.notifications || [];
-    const unread = notifications.filter((item) => !item.isRead && String(item.message || "").trim());
-    if (unread.length) {
-      setAlert((prev) => prev || String(unread[0].message || "You have a new notification."));
-      markCoordinatorNotificationsRead().catch(() => undefined);
+      const notifications = coordinator?.notifications || [];
+      const unread = notifications.filter((item) => !item.isRead && String(item.message || "").trim());
+      if (unread.length) {
+        setAlert((prev) => prev || String(unread[0].message || "You have a new notification."));
+        markCoordinatorNotificationsRead().catch(() => undefined);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -84,6 +114,7 @@ const CoordinatorDashboardPage = () => {
       navigate("/portal");
       return;
     }
+    hydrateFromCache();
     load().catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load dashboard."));
   }, [navigate]);
 
@@ -110,7 +141,7 @@ const CoordinatorDashboardPage = () => {
   const totalEvents = events.length;
   const totalParticipants = participantRows.length;
   const profilePhoto =
-    String(profile?.photoUrl || "").trim() ||
+    resolveApiAssetUrl(profile?.photoUrl) ||
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560'><rect width='100%' height='100%' fill='%230b1f4a'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239fc8ff' font-family='Arial' font-size='44'>Coordinator</text></svg>";
 
   return (
@@ -169,6 +200,9 @@ const CoordinatorDashboardPage = () => {
 
         <section className="glass-card p-6">
           <h3 className="font-heading text-lg font-bold text-foreground mb-4">My Events</h3>
+          {loading && !profile && !events.length ? (
+            <p className="text-sm text-muted-foreground mb-4">Loading dashboard...</p>
+          ) : null}
           <div className="space-y-4">
             {events.map((event) => {
               const parsedDate = parseEventDate(event.time);
@@ -178,14 +212,14 @@ const CoordinatorDashboardPage = () => {
               <div key={event._id || event.title} className="rounded-2xl border border-white/10 bg-card/40 p-5">
                 <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-5 md:gap-8 items-stretch">
                   <div className="rounded-xl border border-white/10 bg-card/30 overflow-hidden w-full h-64 md:h-64 self-stretch">
-                    {event.posterUrl ? (
+                    {resolveApiAssetUrl(event.posterUrl) ? (
                       <button
                         type="button"
-                        onClick={() => setPreviewPoster({ url: event.posterUrl || "", title: event.title })}
+                        onClick={() => setPreviewPoster({ url: resolveApiAssetUrl(event.posterUrl), title: event.title })}
                         className="w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                         aria-label="View poster"
                       >
-                        <img src={event.posterUrl} alt={event.title} className="w-full h-full object-cover" />
+                        <img src={resolveApiAssetUrl(event.posterUrl)} alt={event.title} className="w-full h-full object-cover" />
                       </button>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">

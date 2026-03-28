@@ -6,7 +6,7 @@ const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { upload } = require("../utils/upload");
-const { buildImageUrl, setStoredImage, setImageFromBodyValue } = require("../utils/imageStorage");
+const { buildImageUrl, setStoredImage, setImageFromBodyValue, getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
 
@@ -27,8 +27,8 @@ router.get("/me", async (req, res) => {
         phone: coordinator.phone || "",
         email: coordinator.email,
         department: coordinator.department || "",
-        photoUrl: coordinator.photoUrl || "",
-        paymentQrUrl: coordinator.paymentQrUrl || "",
+        photoUrl: getResolvedImageUrl(coordinator, "photo", req, "users"),
+        paymentQrUrl: getResolvedImageUrl(coordinator, "paymentQr", req, "users"),
         notifications: Array.isArray(coordinator.notifications)
           ? coordinator.notifications.map((item) => ({
               message: item.message,
@@ -118,8 +118,8 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
         phone: coordinator.phone || "",
         email: coordinator.email,
         department: coordinator.department || "",
-        photoUrl: coordinator.photoUrl || "",
-        paymentQrUrl: coordinator.paymentQrUrl || ""
+        photoUrl: getResolvedImageUrl(coordinator, "photo", req, "users"),
+        paymentQrUrl: getResolvedImageUrl(coordinator, "paymentQr", req, "users")
       }
     });
   } catch (error) {
@@ -129,10 +129,23 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
 
 router.get("/participants", async (req, res) => {
   try {
-    const events = await Event.find({ coordinatorId: req.user.id }).lean();
+    const events = await Event.find({ coordinatorId: req.user.id }).select({ eventId: 1 }).lean();
     const eventIds = events.map((e) => e.eventId);
     const participants = eventIds.length
-      ? await Registration.find({ eventId: { $in: eventIds } }).sort({ createdAt: -1 }).lean()
+      ? await Registration.find({ eventId: { $in: eventIds } })
+          .select({
+            registrationId: 1,
+            fullName: 1,
+            email: 1,
+            phone: 1,
+            studentCollege: 1,
+            eventName: 1,
+            studentDepartment: 1,
+            paymentRef: 1,
+            createdAt: 1
+          })
+          .sort({ createdAt: -1 })
+          .lean()
       : [];
 
     return res.json({ participants });

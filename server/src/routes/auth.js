@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { upload } = require("../utils/upload");
-const { setStoredImage, setImageFromBodyValue } = require("../utils/imageStorage");
+const { setStoredImage, setImageFromBodyValue, getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
 
@@ -95,7 +95,7 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
         coordinatorRole: user.coordinatorRole || "Event Coordinator",
         department: user.department,
         phone: user.phone,
-        photoUrl: user.photoUrl || ""
+        photoUrl: getResolvedImageUrl(user, "photo", req, "users")
       }
     });
   } catch (error) {
@@ -131,7 +131,7 @@ router.post("/login", async (req, res) => {
         coordinatorRole: user.coordinatorRole || "Event Coordinator",
         department: user.department,
         phone: user.phone,
-        photoUrl: user.photoUrl || ""
+        photoUrl: getResolvedImageUrl(user, "photo", req, "users")
       }
     });
   } catch (_error) {
@@ -152,7 +152,7 @@ router.get("/me", requireAuth, async (req, res) => {
       coordinatorRole: user.coordinatorRole || "Event Coordinator",
       department: user.department,
       phone: user.phone,
-      photoUrl: user.photoUrl || ""
+      photoUrl: getResolvedImageUrl(user, "photo", req, "users")
     }
   });
 });

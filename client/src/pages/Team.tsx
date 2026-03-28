@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import SectionHeader from "@/components/SectionHeader";
 import { fetchPublicCoordinators } from "@/data/api";
+import { resolveApiAssetUrl } from "@/data/helpers";
 import { PublicCoordinator } from "@/types";
 import { Mail, Phone, User } from "lucide-react";
 
@@ -33,9 +34,9 @@ const TeamPage = () => {
               className="glass-card p-6 card-hover-glow group flex flex-col h-full"
             >
               <div className="flex items-center gap-4 mb-4">
-                {member.photoUrl ? (
+                {resolveApiAssetUrl(member.photoUrl) ? (
                   <img
-                    src={member.photoUrl}
+                    src={resolveApiAssetUrl(member.photoUrl)}
                     alt={member.name}
                     className="w-20 h-20 rounded-2xl object-contain border border-white/10 bg-card/40 p-1 group-hover:scale-105 transition-transform"
                   />

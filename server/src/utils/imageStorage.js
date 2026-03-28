@@ -24,9 +24,8 @@ function createImageDocument(file) {
 }
 
 function buildImageUrl(req, entity, id, field) {
-  if (!req || !entity || !id || !field) return "";
-  const base = getPublicApiBase(req);
-  return `${base}/api/images/${entity}/${id}/${field}`;
+  if (!entity || !id || !field) return "";
+  return `/api/images/${entity}/${id}/${field}`;
 }
 
 function setStoredImage(doc, fieldName, file, req, entity) {
@@ -54,8 +53,20 @@ function setImageFromBodyValue(doc, fieldName, value) {
   doc[`${fieldName}Url`] = normalizedValue;
 }
 
+function getResolvedImageUrl(doc, fieldName, req, entity) {
+  if (!doc || !fieldName) return "";
+
+  const image = doc[`${fieldName}Image`];
+  if (image?.data && image?.contentType) {
+    return buildImageUrl(req, entity, doc._id || doc.id, fieldName);
+  }
+
+  return String(doc[`${fieldName}Url`] || "").trim();
+}
+
 module.exports = {
   buildImageUrl,
   setStoredImage,
-  setImageFromBodyValue
+  setImageFromBodyValue,
+  getResolvedImageUrl
 };

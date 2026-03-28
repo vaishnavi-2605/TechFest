@@ -5,18 +5,23 @@ const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const ContactMessage = require("../models/ContactMessage");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
 
 router.use(requireAuth, requireRole("super_admin", "admin"));
 
-router.get("/coordinators", async (_req, res) => {
+router.get("/coordinators", async (req, res) => {
   try {
     const coordinators = await User.find({ role: "coordinator", isActive: true }).sort({ createdAt: -1 }).lean();
-
+    const coordinatorIds = coordinators.map((coordinator) => coordinator._id);
     const eventIdsByCoordinator = new Map();
     const eventsByCoordinator = new Map();
-    const events = await Event.find({ coordinatorId: { $exists: true, $ne: null } }).lean();
+    const events = coordinatorIds.length
+      ? await Event.find({ coordinatorId: { $in: coordinatorIds } })
+          .select({ coordinatorId: 1, eventId: 1, status: 1, title: 1, time: 1, fee: 1 })
+          .lean()
+      : [];
     events.forEach((event) => {
       const key = String(event.coordinatorId || "");
       if (!key) return;
@@ -26,36 +31,46 @@ router.get("/coordinators", async (_req, res) => {
       eventsByCoordinator.get(key).push(event);
     });
 
-    const list = await Promise.all(
-      coordinators.map(async (c) => {
-        const eventIds = eventIdsByCoordinator.get(String(c._id)) || [];
-        const coordinatorEvents = eventsByCoordinator.get(String(c._id)) || [];
-        const participantCount = eventIds.length ? await Registration.countDocuments({ eventId: { $in: eventIds } }) : 0;
-        const pendingCount = coordinatorEvents.filter((event) => event.status === "pending").length;
-        const status = pendingCount > 0 ? "pending" : "active";
+    const allEventIds = [...new Set(events.map((event) => String(event.eventId || "")).filter(Boolean))];
+    const participantCounts = allEventIds.length
+      ? await Registration.aggregate([
+          { $match: { eventId: { $in: allEventIds } } },
+          { $group: { _id: "$eventId", count: { $sum: 1 } } }
+        ])
+      : [];
+    const participantCountByEventId = new Map(participantCounts.map((row) => [String(row._id), Number(row.count || 0)]));
 
-        return {
-          id: c._id,
-          name: c.name,
-          phone: c.phone || "N/A",
-          department: c.department || "N/A",
-          participantCount,
-          photoUrl: c.photoUrl || "",
-          status,
-          totalEvents: coordinatorEvents.length,
-          pendingCount,
-          pendingEvents: coordinatorEvents
-            .filter((event) => event.status === "pending")
-            .map((event) => ({
-              id: event._id,
-              eventId: event.eventId,
-              title: event.title,
-              time: event.time,
-              fee: event.fee
-            }))
-        };
-      })
-    );
+    const list = coordinators.map((c) => {
+      const eventIds = eventIdsByCoordinator.get(String(c._id)) || [];
+      const coordinatorEvents = eventsByCoordinator.get(String(c._id)) || [];
+      const participantCount = eventIds.reduce(
+        (sum, eventId) => sum + (participantCountByEventId.get(String(eventId)) || 0),
+        0
+      );
+      const pendingCount = coordinatorEvents.filter((event) => event.status === "pending").length;
+      const status = pendingCount > 0 ? "pending" : "active";
+
+      return {
+        id: c._id,
+        name: c.name,
+        phone: c.phone || "N/A",
+        department: c.department || "N/A",
+        participantCount,
+        photoUrl: getResolvedImageUrl(c, "photo", req, "users"),
+        status,
+        totalEvents: coordinatorEvents.length,
+        pendingCount,
+        pendingEvents: coordinatorEvents
+          .filter((event) => event.status === "pending")
+          .map((event) => ({
+            id: event._id,
+            eventId: event.eventId,
+            title: event.title,
+            time: event.time,
+            fee: event.fee
+          }))
+      };
+    });
 
     return res.json({ coordinators: list });
   } catch (_error) {
@@ -89,7 +104,7 @@ router.get("/coordinators/:id", async (req, res) => {
         email: coordinator.email,
         department: coordinator.department || "N/A",
         status: coordinator.isActive ? "Active" : "Inactive",
-        photoUrl: coordinator.photoUrl || "",
+        photoUrl: getResolvedImageUrl(coordinator, "photo", req, "users"),
         totalParticipants,
         totalEvents: events.length,
         events: events.map((e) => ({
@@ -101,7 +116,7 @@ router.get("/coordinators/:id", async (req, res) => {
           fee: e.fee,
           time: e.time,
           address: e.address,
-          posterUrl: e.posterUrl || "",
+          posterUrl: getResolvedImageUrl(e, "poster", req, "events"),
           status: e.status || "active",
           participantCount: participantCountByEventId.get(String(e.eventId)) || 0
         }))
@@ -222,11 +237,8 @@ router.delete("/messages/:id", async (req, res) => {
 
 router.delete("/coordinators/:id", async (req, res) => {
   try {
-    const coordinator = await User.findOne({ _id: req.params.id, role: "coordinator" });
+    const coordinator = await User.findOne({ _id: req.params.id, role: "coordinator" }).lean();
     if (!coordinator) return res.status(404).json({ error: "Coordinator not found." });
-
-    coordinator.isActive = false;
-    await coordinator.save();
 
     const coordinatorEvents = await Event.find({ coordinatorId: coordinator._id }).lean();
     const eventPublicIds = coordinatorEvents.map((event) => event.eventId).filter(Boolean);
@@ -235,6 +247,7 @@ router.delete("/coordinators/:id", async (req, res) => {
     if (eventPublicIds.length) {
       await Registration.deleteMany({ eventId: { $in: eventPublicIds } });
     }
+    await User.deleteOne({ _id: coordinator._id });
 
     return res.json({ message: "Coordinator deleted." });
   } catch (_error) {

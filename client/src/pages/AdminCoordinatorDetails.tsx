@@ -5,6 +5,7 @@ import ParticleBackground from "@/components/ParticleBackground";
 import SectionHeader from "@/components/SectionHeader";
 import { deleteAdminCoordinator, deleteAdminEvent, fetchAdminCoordinatorDetails, updateAdminEventStatus } from "@/data/api";
 import { getAuth } from "@/data/auth";
+import { resolveApiAssetUrl } from "@/data/helpers";
 
 type CoordinatorEvent = {
   id: string;
@@ -155,8 +156,8 @@ const AdminCoordinatorDetailsPage = () => {
               <p><span className="text-foreground font-semibold">Total Participants:</span> {Number(details?.totalParticipants || 0)}</p>
             </div>
             <div className="rounded-2xl overflow-hidden border border-white/10 bg-card/40 p-2">
-              {details?.photoUrl ? (
-                <img src={details.photoUrl} alt={details.name || "Coordinator"} className="w-full h-[200px] sm:h-[220px] md:h-[220px] lg:h-[260px] object-contain" />
+              {resolveApiAssetUrl(details?.photoUrl) ? (
+                <img src={resolveApiAssetUrl(details?.photoUrl)} alt={details?.name || "Coordinator"} className="w-full h-[200px] sm:h-[220px] md:h-[220px] lg:h-[260px] object-contain" />
               ) : (
                 <div className="w-full h-[200px] sm:h-[220px] md:h-[220px] lg:h-[260px] bg-card/40 text-muted-foreground flex items-center justify-center">No Photo</div>
               )}
@@ -170,14 +171,14 @@ const AdminCoordinatorDetailsPage = () => {
             {events.map((event) => (
               <div key={event.id} className="rounded-2xl border border-white/10 bg-card/40 p-4">
                 <div className="flex flex-col lg:flex-row gap-5 items-stretch">
-                  {event.posterUrl ? (
+                  {resolveApiAssetUrl(event.posterUrl) ? (
                     <button
                       type="button"
-                      onClick={() => setPreviewPoster({ url: event.posterUrl || "", title: event.title })}
+                      onClick={() => setPreviewPoster({ url: resolveApiAssetUrl(event.posterUrl), title: event.title })}
                       className="w-full lg:w-56 h-44 lg:h-44 self-stretch rounded-xl border border-white/10 overflow-hidden bg-card/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                       aria-label="View poster"
                     >
-                      <img src={event.posterUrl} alt={event.title} className="w-full h-full object-cover" />
+                      <img src={resolveApiAssetUrl(event.posterUrl)} alt={event.title} className="w-full h-full object-cover" />
                     </button>
                   ) : (
                     <div className="w-full lg:w-56 h-44 lg:h-44 self-stretch rounded-xl border border-white/10 bg-card/40 flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
