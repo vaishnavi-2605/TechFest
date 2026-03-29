@@ -55,6 +55,7 @@ export interface BackendEvent {
   guidePhone?: string;
   posterUrl?: string;
   paymentQrUrl?: string;
+  whatsappGroupLink?: string;
   rules?: string[];
   subEvents?: BackendSubEvent[];
   status?: string;

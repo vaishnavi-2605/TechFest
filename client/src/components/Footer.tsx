@@ -78,13 +78,13 @@ const Footer = () => {
                   to="/portal"
                   className="inline-flex items-center justify-center px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg bg-gradient-to-r from-secondary to-primary text-primary-foreground font-heading font-semibold tracking-wide shadow-[0_0_20px_hsl(187,94%,43%,0.2)]"
                 >
-                  Register Event
+                  Event Coordinator
                 </Link>
                 <Link
                   to="/admin/login"
                   className="inline-flex items-center justify-center px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg border border-white/15 text-foreground font-heading font-semibold tracking-wide hover:bg-white/5 transition-colors"
                 >
-                  Admin Login
+                  Admin
                 </Link>
               </div>
             </div>

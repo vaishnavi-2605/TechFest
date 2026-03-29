@@ -45,6 +45,7 @@ const eventSchema = new mongoose.Schema(
     fee: { type: Number, required: true, min: 0 },
     paymentQrUrl: { type: String, trim: true },
     paymentQrImage: imageSchema,
+    whatsappGroupLink: { type: String, trim: true },
     address: { type: String, required: true, trim: true },
     time: { type: String, required: true, trim: true },
     guide: { type: String, required: true, trim: true },

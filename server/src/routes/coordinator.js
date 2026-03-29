@@ -241,12 +241,20 @@ router.post("/events", upload.fields([
       address,
       posterUrl,
       paymentQrUrl,
+      whatsappGroupLink,
       rules,
       subEvents
     } = req.body || {};
 
     if (!title || !shortDescription || !description) {
       return res.status(400).json({ error: "Title, one-line description and detailed description are required." });
+    }
+    const normalizedWhatsappGroupLink = String(whatsappGroupLink || "").trim();
+    if (!normalizedWhatsappGroupLink) {
+      return res.status(400).json({ error: "WhatsApp group link is required." });
+    }
+    if (!/^https?:\/\/\S+$/i.test(normalizedWhatsappGroupLink)) {
+      return res.status(400).json({ error: "Enter a valid WhatsApp group link." });
     }
     const normalizedEventType = String(eventType || "Technical").trim();
     if (!["Technical", "Non-Technical", "Workshop"].includes(normalizedEventType)) {
@@ -299,6 +307,7 @@ router.post("/events", upload.fields([
       description: String(description).trim(),
       fee: finalFee,
       paymentQrUrl: "",
+      whatsappGroupLink: normalizedWhatsappGroupLink,
       isTeamEvent: derivedIsTeamEvent,
       teamSize: normalizedTeamSize,
       time: String(time || "").trim() || "To be announced",
@@ -380,6 +389,7 @@ router.put("/events/:id", upload.fields([
       address,
       posterUrl,
       paymentQrUrl,
+      whatsappGroupLink,
       rules
     } = req.body || {};
 
@@ -398,6 +408,16 @@ router.put("/events/:id", upload.fields([
     if (teamSize !== undefined) event.teamSize = Math.max(1, Number(teamSize || 1));
     if (time !== undefined) event.time = String(time || "").trim() || "To be announced";
     if (address !== undefined) event.address = String(address || "").trim() || "To be announced";
+    if (whatsappGroupLink !== undefined) {
+      const normalizedWhatsappGroupLink = String(whatsappGroupLink || "").trim();
+      if (!normalizedWhatsappGroupLink) {
+        return res.status(400).json({ error: "WhatsApp group link is required." });
+      }
+      if (!/^https?:\/\/\S+$/i.test(normalizedWhatsappGroupLink)) {
+        return res.status(400).json({ error: "Enter a valid WhatsApp group link." });
+      }
+      event.whatsappGroupLink = normalizedWhatsappGroupLink;
+    }
 
     if (rules !== undefined) {
       let parsedRules = [];

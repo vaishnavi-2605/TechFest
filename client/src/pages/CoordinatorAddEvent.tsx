@@ -26,6 +26,7 @@ const CoordinatorAddEventPage = () => {
     eventDate: "",
     time: "",
     address: "",
+    whatsappGroupLink: "",
     rulesText: "",
   });
 
@@ -70,6 +71,8 @@ const CoordinatorAddEventPage = () => {
         else if (parsedEventDate < startOfToday) nextErrors.eventDate = "Event date cannot be in the past.";
       }
       if (!form.address.trim()) nextErrors.address = "Venue/address is required.";
+      if (!form.whatsappGroupLink.trim()) nextErrors.whatsappGroupLink = "WhatsApp group link is required.";
+      else if (!/^https?:\/\/\S+$/i.test(form.whatsappGroupLink.trim())) nextErrors.whatsappGroupLink = "Enter a valid WhatsApp group link.";
       if (Number(form.fee || 0) > 0 && !paymentQrFile) nextErrors.paymentQr = "Payment QR is required for paid events.";
       if (Object.keys(nextErrors).length > 0) {
         setErrors(nextErrors);
@@ -87,11 +90,12 @@ const CoordinatorAddEventPage = () => {
       fd.append("teamSize", form.teamSize);
       fd.append("time", form.time ? `${form.eventDate} | ${form.time}` : form.eventDate);
       fd.append("address", form.address);
+      fd.append("whatsappGroupLink", form.whatsappGroupLink.trim());
       fd.append("rules", JSON.stringify(form.rulesText.split("\n").map((x) => x.trim()).filter(Boolean)));
       if (posterFile) fd.append("poster", posterFile);
       if (paymentQrFile) fd.append("paymentQr", paymentQrFile);
       await addCoordinatorEvent(fd);
-      setForm({ title: "", eventType: "Technical", shortDescription: "", description: "", reward: "", fee: "0", teamSize: "1", eventDate: "", time: "", address: "", rulesText: "" });
+      setForm({ title: "", eventType: "Technical", shortDescription: "", description: "", reward: "", fee: "0", teamSize: "1", eventDate: "", time: "", address: "", whatsappGroupLink: "", rulesText: "" });
       setPosterFile(null);
       setPaymentQrFile(null);
       navigate("/coordinator/dashboard", { state: { flashMessage: "Event submitted for admin approval." } });
@@ -234,6 +238,16 @@ const CoordinatorAddEventPage = () => {
                 onChange={(e) => updateField("address", e.target.value)}
               />
               {errors.address && <p className="text-xs text-destructive mt-1">{errors.address}</p>}
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">WhatsApp Group Link</label>
+              <input
+                className={`w-full px-4 py-3 rounded-lg bg-muted/50 border ${errors.whatsappGroupLink ? "border-destructive" : "border-border"}`}
+                placeholder="https://chat.whatsapp.com/..."
+                value={form.whatsappGroupLink}
+                onChange={(e) => updateField("whatsappGroupLink", e.target.value)}
+              />
+              {errors.whatsappGroupLink && <p className="text-xs text-destructive mt-1">{errors.whatsappGroupLink}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

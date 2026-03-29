@@ -52,6 +52,7 @@ const RegisterPage = () => {
   const [registrationClosed, setRegistrationClosed] = useState(false);
   const [showClosedPopup, setShowClosedPopup] = useState(false);
   const [loadingEvent, setLoadingEvent] = useState(!readCachedEvent(eventId));
+  const [groupJoined, setGroupJoined] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -79,6 +80,7 @@ const RegisterPage = () => {
     "memberNames",
     "paymentRef",
     "confirmCheck",
+    "groupJoined",
   ] as const;
 
   const errorFieldToId: Record<string, string> = {
@@ -92,6 +94,7 @@ const RegisterPage = () => {
     memberNames: "reg-member-names-0",
     paymentRef: "reg-payment-ref",
     confirmCheck: "reg-confirm-check",
+    groupJoined: "reg-group-joined",
   };
 
   function scrollToFirstError(nextErrors: Record<string, string>) {
@@ -213,6 +216,18 @@ const RegisterPage = () => {
     return Object.keys(nextErrors).length === 0;
   }
 
+  function validatePassAccess() {
+    if (!event?.whatsappGroupLink) return true;
+    if (groupJoined) {
+      clearError("groupJoined");
+      return true;
+    }
+    const nextErrors = { groupJoined: "Join the WhatsApp group before confirming the pass." };
+    setErrors(nextErrors);
+    scrollToFirstError(nextErrors);
+    return false;
+  }
+
   function next() {
     setStatusMessage("");
     if (registrationClosed) {
@@ -261,6 +276,7 @@ const RegisterPage = () => {
 
       const response = await createRegistration(payload);
       setSavedRegistration((response.registration || payload) as Record<string, string>);
+      setGroupJoined(false);
       setStep(2);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Registration failed.");
@@ -574,7 +590,11 @@ const RegisterPage = () => {
                 <PartyPopper className="w-16 h-16 text-primary mx-auto" />
                 <div>
                   <h3 className="font-heading text-2xl font-bold gradient-text mb-2">Pass Generated</h3>
-                  <p className="text-sm text-muted-foreground">Your registration is complete and your event pass is ready.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {event?.whatsappGroupLink
+                      ? "Your registration is complete. Join the WhatsApp group first, then confirm your pass."
+                      : "Your registration is complete and your event pass is ready."}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-card/30 p-5 text-left max-w-xl mx-auto space-y-2">
                   <p><span className="text-muted-foreground">Registration ID:</span> <span className="text-foreground">{savedRegistration.registrationId}</span></p>
@@ -587,10 +607,44 @@ const RegisterPage = () => {
                   <p><span className="text-muted-foreground">Date:</span> <span className="text-foreground">{formatDateLabel(savedRegistration.time)}</span></p>
                   <p><span className="text-muted-foreground">Time:</span> <span className="text-foreground">{formatTimeLabel(savedRegistration.time)}</span></p>
                 </div>
+                {event?.whatsappGroupLink ? (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-left max-w-xl mx-auto space-y-4">
+                    <div>
+                      <h4 className="font-heading text-lg font-semibold text-foreground">Join Event WhatsApp Group</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Please join the coordinator's WhatsApp group before confirming your pass.
+                      </p>
+                    </div>
+                    <a
+                      href={event.whatsappGroupLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
+                    >
+                      Join WhatsApp Group
+                    </a>
+                    <label className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <input
+                        id="reg-group-joined"
+                        type="checkbox"
+                        checked={groupJoined}
+                        onChange={(e) => {
+                          setGroupJoined(e.target.checked);
+                          clearError("groupJoined");
+                        }}
+                      />
+                      I have joined the WhatsApp group.
+                    </label>
+                    {errors.groupJoined && <p className="text-xs text-destructive">{errors.groupJoined}</p>}
+                  </div>
+                ) : null}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     type="button"
-                    onClick={() => openPrintPassWindow(savedRegistration as never)}
+                    onClick={() => {
+                      if (!validatePassAccess()) return;
+                      openPrintPassWindow(savedRegistration as never);
+                    }}
                     className="px-8 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
                   >
                     Confirm Pass
