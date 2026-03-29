@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addCoordinatorEvent } from "@/data/api";
 import { getAuth } from "@/data/auth";
+import { formatDateLabel, parseEventDate } from "@/data/helpers";
 
 const CoordinatorAddEventPage = () => {
   const navigate = useNavigate();
@@ -45,6 +49,10 @@ const CoordinatorAddEventPage = () => {
     }
   }, [navigate]);
 
+  const selectedEventDate = form.eventDate ? parseEventDate(form.eventDate.trim()) : null;
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
@@ -56,6 +64,11 @@ const CoordinatorAddEventPage = () => {
       if (!form.shortDescription.trim()) nextErrors.shortDescription = "Short description is required.";
       if (!form.description.trim()) nextErrors.description = "Detailed description is required.";
       if (!form.eventDate) nextErrors.eventDate = "Event date is required.";
+      if (form.eventDate) {
+        const parsedEventDate = parseEventDate(form.eventDate.trim());
+        if (Number.isNaN(parsedEventDate.getTime())) nextErrors.eventDate = "Enter a valid date.";
+        else if (parsedEventDate < startOfToday) nextErrors.eventDate = "Event date cannot be in the past.";
+      }
       if (!form.address.trim()) nextErrors.address = "Venue/address is required.";
       if (Number(form.fee || 0) > 0 && !paymentQrFile) nextErrors.paymentQr = "Payment QR is required for paid events.";
       if (Object.keys(nextErrors).length > 0) {
@@ -178,21 +191,33 @@ const CoordinatorAddEventPage = () => {
                   value={form.teamSize}
                   onChange={(e) => updateField("teamSize", e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {Number(form.teamSize || 1) <= 1 ? "Event Type: Individual" : "Event Type: Team"}
-                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-muted-foreground mb-1 block">Event Date</label>
-                <input
-                  className={`w-full px-4 py-3 rounded-lg bg-muted/50 border ${errors.eventDate ? "border-destructive" : "border-border"}`}
-                  type="date"
-                  min={new Date().toISOString().split("T")[0]}
-                  value={form.eventDate}
-                  onChange={(e) => updateField("eventDate", e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`w-full px-4 py-3 rounded-lg bg-muted/50 border ${errors.eventDate ? "border-destructive" : "border-border"} text-left flex items-center justify-between gap-3`}
+                    >
+                      <span className={form.eventDate ? "text-foreground" : "text-muted-foreground"}>
+                        {form.eventDate || "dd/mm/yyyy"}
+                      </span>
+                      <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border-white/10 bg-card/95" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedEventDate && !Number.isNaN(selectedEventDate.getTime()) ? selectedEventDate : undefined}
+                      onSelect={(date) => updateField("eventDate", date ? formatDateLabel(date.toISOString()) : "")}
+                      disabled={(date) => date < startOfToday}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {errors.eventDate && <p className="text-xs text-destructive mt-1">{errors.eventDate}</p>}
               </div>
               <div>

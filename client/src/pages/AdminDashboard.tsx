@@ -93,7 +93,7 @@ const AdminDashboardPage = () => {
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4 max-w-5xl space-y-6">
-        <SectionHeader title="Coordinator Dashboard" subtitle="View coordinator profiles and approve events before they appear publicly." />
+        <SectionHeader title="Admin Dashboard" subtitle="View coordinator profiles and approve events before they appear publicly." />
         <div className="flex justify-end">
           <div className="flex gap-3">
             <Link to="/admin/messages" className="relative px-5 py-3 rounded-lg border border-white/15 text-muted-foreground">

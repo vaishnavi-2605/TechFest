@@ -19,6 +19,22 @@ const MONTH_MAP: Record<string, number> = {
 
 export function parseEventDate(timeText?: string) {
   const dateText = String(timeText || "").split("|")[0].trim();
+  const numericMatch = dateText.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (numericMatch) {
+    const day = Number(numericMatch[1]);
+    const month = Number(numericMatch[2]) - 1;
+    const year = Number(numericMatch[3]);
+    const numericDate = new Date(year, month, day);
+    if (
+      !Number.isNaN(numericDate.getTime()) &&
+      numericDate.getFullYear() === year &&
+      numericDate.getMonth() === month &&
+      numericDate.getDate() === day
+    ) {
+      return numericDate;
+    }
+  }
+
   const direct = new Date(dateText);
   if (!Number.isNaN(direct.getTime())) return direct;
 

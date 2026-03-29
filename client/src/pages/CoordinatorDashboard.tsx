@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
-import { Image as ImageIcon, Search } from "lucide-react";
+import { Download, Image as ImageIcon, Search } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { formatDateLabel, parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
-import { addCoordinatorSponsor, deleteCoordinatorEvent, deleteCoordinatorSponsor, fetchCoordinatorMe, fetchCoordinatorParticipants, fetchCoordinatorSponsors, markCoordinatorNotificationsRead } from "@/data/api";
+import { deleteCoordinatorEvent, deleteCoordinatorSponsor, fetchCoordinatorMe, fetchCoordinatorParticipants, fetchCoordinatorSponsors, markCoordinatorNotificationsRead } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
 import { Sponsor } from "@/types";
 
@@ -84,8 +86,6 @@ const CoordinatorDashboardPage = () => {
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [alert, setAlert] = useState("");
   const [participantQuery, setParticipantQuery] = useState("");
-  const [sponsorForm, setSponsorForm] = useState({ name: "", tier: "Silver" as Sponsor["tier"], url: "" });
-  const [savingSponsor, setSavingSponsor] = useState(false);
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -147,26 +147,6 @@ const CoordinatorDashboardPage = () => {
     }
   }
 
-  async function handleAddSponsor(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    try {
-      setSavingSponsor(true);
-      setAlert("");
-      await addCoordinatorSponsor({
-        name: sponsorForm.name,
-        tier: sponsorForm.tier,
-        url: sponsorForm.url
-      });
-      setSponsorForm({ name: "", tier: "Silver", url: "" });
-      await load();
-      setAlert("Sponsor added successfully.");
-    } catch (error) {
-      setAlert(error instanceof Error ? error.message : "Failed to add sponsor.");
-    } finally {
-      setSavingSponsor(false);
-    }
-  }
-
   async function handleDeleteSponsor(sponsorId: string) {
     const ok = window.confirm("Delete this sponsor?");
     if (!ok) return;
@@ -216,6 +196,62 @@ const CoordinatorDashboardPage = () => {
       .split(",")
       .map((member) => member.trim())
       .filter(Boolean)[0] || "N/A";
+
+  function handleDownloadParticipantsPdf() {
+    const rows = participants.map((row) => ([
+      row.registrationId || "N/A",
+      row.fullName || "N/A",
+      getPrimaryTeamMember(row.teamMembers),
+      row.phone || "N/A",
+      row.email || "N/A",
+      row.studentCollege || "N/A",
+      row.studentDepartment || "N/A",
+      row.paymentRef || "N/A"
+    ]));
+
+    if (!rows.length) {
+      setAlert("No participants available to download.");
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4"
+    });
+
+    doc.setFontSize(16);
+    doc.text("Participant List", 40, 40);
+    doc.setFontSize(10);
+    doc.text(`Coordinator: ${String(profile?.name || "Coordinator")}`, 40, 60);
+    doc.text(`Generated on: ${new Date().toLocaleDateString("en-GB")}`, 40, 76);
+
+    autoTable(doc, {
+      startY: 92,
+      head: [["ID", "Team Name", "Member Name", "Phone", "Email", "College", "Department", "Payment"]],
+      body: rows,
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+        lineColor: [225, 225, 235],
+        lineWidth: 0.5
+      },
+      headStyles: {
+        fillColor: [36, 44, 88],
+        textColor: [255, 255, 255],
+        fontStyle: "bold"
+      },
+      bodyStyles: {
+        textColor: [30, 30, 40]
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 252]
+      },
+      margin: { left: 28, right: 28 }
+    });
+
+    doc.save("participant-list.pdf");
+  }
   const totalEvents = events.length;
   const totalParticipants = participantRows.length;
   const profilePhoto =
@@ -271,6 +307,12 @@ const CoordinatorDashboardPage = () => {
               className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
             >
               Add Event
+            </button>
+            <button
+              onClick={() => navigate("/coordinator/add-sponsor")}
+              className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
+            >
+              Add Sponsor
             </button>
             <button
               onClick={() => navigate("/coordinator/update-profile")}
@@ -379,47 +421,6 @@ const CoordinatorDashboardPage = () => {
             <p className="text-sm text-muted-foreground">Add sponsors using the same tier format shown on the public sponsors sections.</p>
           </div>
 
-          <form onSubmit={handleAddSponsor} className="grid grid-cols-1 md:grid-cols-[1.2fr_180px_1fr_auto] gap-4 items-end">
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Sponsor Name</label>
-              <input
-                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
-                placeholder="Sponsor name"
-                value={sponsorForm.name}
-                onChange={(e) => setSponsorForm((prev) => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Type</label>
-              <select
-                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
-                value={sponsorForm.tier}
-                onChange={(e) => setSponsorForm((prev) => ({ ...prev, tier: e.target.value as Sponsor["tier"] }))}
-              >
-                <option value="Title">Title</option>
-                <option value="Gold">Gold</option>
-                <option value="Silver">Silver</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Website Link (optional)</label>
-              <input
-                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
-                placeholder="https://example.com"
-                value={sponsorForm.url}
-                onChange={(e) => setSponsorForm((prev) => ({ ...prev, url: e.target.value }))}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={savingSponsor}
-              className="px-5 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold disabled:opacity-70"
-            >
-              {savingSponsor ? "Adding..." : "Add Sponsor"}
-            </button>
-          </form>
-
           {(["Title", "Gold", "Silver"] as Sponsor["tier"][]).map((tier) => {
             const items = sponsors.filter((sponsor) => sponsor.tier === tier);
             if (!items.length) return null;
@@ -469,15 +470,24 @@ const CoordinatorDashboardPage = () => {
         <section className="glass-card p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
             <h3 className="font-heading text-lg font-bold text-foreground">Participants</h3>
-            <div className="relative">
-              <input
-                className="w-56 sm:w-96 pl-9 pr-12 py-2 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
-                placeholder="Search by name, ID, phone, email, event"
-                value={participantQuery}
-                onChange={(e) => setParticipantQuery(e.target.value)}
-              />
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              {participantQuery ? (
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleDownloadParticipantsPdf}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/15 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-sm"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+              <div className="relative">
+                <input
+                  className="w-56 sm:w-96 pl-9 pr-12 py-2 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
+                  placeholder="Search by name, ID, phone, email, event"
+                  value={participantQuery}
+                  onChange={(e) => setParticipantQuery(e.target.value)}
+                />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                {participantQuery ? (
                 <button
                   type="button"
                   onClick={() => setParticipantQuery("")}
@@ -485,7 +495,8 @@ const CoordinatorDashboardPage = () => {
                 >
                   Clear
                 </button>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </div>
           <div className="overflow-x-auto rounded-xl border border-white/10">

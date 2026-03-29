@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import { login } from "@/data/api";
-import { saveAuth } from "@/data/auth";
+import { clearAuth, saveAuth } from "@/data/auth";
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -20,14 +20,15 @@ const AdminLoginPage = () => {
       setAlert("");
 
       const response = await login({ email, password });
-      const auth = saveAuth(response);
-      const role = String((auth.user as { role?: string })?.role || "");
+      const role = String((response.user as { role?: string })?.role || "");
 
       if (!["admin", "super_admin"].includes(role)) {
-        setAlert("This login page is only for admin accounts.");
+        clearAuth();
+        setAlert("Invalid login. Only admin can login here.");
         return;
       }
 
+      saveAuth(response);
       navigate("/admin/dashboard");
     } catch (error) {
       setAlert(error instanceof Error ? error.message : "Admin login failed.");

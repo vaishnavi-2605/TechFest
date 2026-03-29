@@ -21,6 +21,7 @@ import AdminMessagesPage from "./pages/AdminMessages";
 import AdminCoordinatorDetailsPage from "./pages/AdminCoordinatorDetails";
 import CoordinatorDashboardPage from "./pages/CoordinatorDashboard";
 import CoordinatorAddEventPage from "./pages/CoordinatorAddEvent";
+import CoordinatorAddSponsorPage from "./pages/CoordinatorAddSponsor";
 import CoordinatorUpdateProfilePage from "./pages/CoordinatorUpdateProfile";
 import CoordinatorEditEventPage from "./pages/CoordinatorEditEvent";
 import NotFound from "./pages/NotFound";
@@ -63,6 +64,7 @@ const AnimatedRoutes = () => {
           <Route path="/admin/messages" element={<AdminMessagesPage />} />
           <Route path="/coordinator/dashboard" element={<CoordinatorDashboardPage />} />
           <Route path="/coordinator/add-event" element={<CoordinatorAddEventPage />} />
+          <Route path="/coordinator/add-sponsor" element={<CoordinatorAddSponsorPage />} />
           <Route path="/coordinator/update-profile" element={<CoordinatorUpdateProfilePage />} />
           <Route path="/coordinator/events/:eventId/edit" element={<CoordinatorEditEventPage />} />
           <Route path="*" element={<NotFound />} />
