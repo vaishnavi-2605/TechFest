@@ -41,6 +41,7 @@ type CoordinatorEvent = {
 type ParticipantRow = {
   registrationId?: string;
   fullName?: string;
+  teamMembers?: string;
   email?: string;
   phone?: string;
   studentCollege?: string;
@@ -202,13 +203,19 @@ const CoordinatorDashboardPage = () => {
     if (!query) return participants;
     return participants.filter((row) => {
       const name = String(row.fullName || "").toLowerCase();
+      const teamMembers = String(row.teamMembers || "").toLowerCase();
       const id = String(row.registrationId || "").toLowerCase();
       const phone = String(row.phone || "").toLowerCase();
       const email = String(row.email || "").toLowerCase();
       const event = String(row.eventName || "").toLowerCase();
-      return name.includes(query) || id.includes(query) || phone.includes(query) || email.includes(query) || event.includes(query);
+      return name.includes(query) || teamMembers.includes(query) || id.includes(query) || phone.includes(query) || email.includes(query) || event.includes(query);
     });
   }, [participants, participantQuery]);
+  const getPrimaryTeamMember = (teamMembers?: string) =>
+    String(teamMembers || "")
+      .split(",")
+      .map((member) => member.trim())
+      .filter(Boolean)[0] || "N/A";
   const totalEvents = events.length;
   const totalParticipants = participantRows.length;
   const profilePhoto =
@@ -486,7 +493,8 @@ const CoordinatorDashboardPage = () => {
               <thead className="bg-card/40">
                 <tr className="text-left text-muted-foreground border-b border-white/10">
                   <th className="py-3 px-4">ID</th>
-                  <th className="py-3 px-4">Name</th>
+                  <th className="py-3 px-4">Team Name</th>
+                  <th className="py-3 px-4">Member Name</th>
                   <th className="py-3 px-4">Phone</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">College</th>
@@ -499,6 +507,7 @@ const CoordinatorDashboardPage = () => {
                   <tr key={`${row.registrationId || row.email}-${index}`} className="border-b border-white/5 text-foreground/80">
                     <td className="py-3 px-4">{row.registrationId || "N/A"}</td>
                     <td className="py-3 px-4">{row.fullName || "N/A"}</td>
+                    <td className="py-3 px-4">{getPrimaryTeamMember(row.teamMembers)}</td>
                     <td className="py-3 px-4">{row.phone || "N/A"}</td>
                     <td className="py-3 px-4">{row.email || "N/A"}</td>
                     <td className="py-3 px-4">{row.studentCollege || "N/A"}</td>
@@ -508,7 +517,7 @@ const CoordinatorDashboardPage = () => {
                 ))}
                 {!participantRows.length ? (
                   <tr>
-                    <td className="py-4 px-4 text-muted-foreground" colSpan={7}>
+                    <td className="py-4 px-4 text-muted-foreground" colSpan={8}>
                       No participants yet.
                     </td>
                   </tr>

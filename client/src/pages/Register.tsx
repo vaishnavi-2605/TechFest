@@ -163,7 +163,7 @@ const RegisterPage = () => {
     if (!event) return;
     const size = Math.max(1, Number(event.teamSize || 1));
     if (!Number.isFinite(size)) return;
-    const maxAllowed = Math.max(1, size - 1);
+    const maxAllowed = Math.max(1, size);
     setMemberCount((prev) => {
       const current = Math.max(1, Number(prev || 1));
       const clamped = Math.min(current, maxAllowed);
@@ -178,14 +178,15 @@ const RegisterPage = () => {
 
   function validateDetails() {
     const nextErrors: Record<string, string> = {};
-    if (!form.fullName.trim() || form.fullName.trim().split(/\s+/).length < 2) nextErrors.fullName = "Enter full name";
+    if (!form.fullName.trim()) nextErrors.fullName = isTeamEvent ? "Enter team name" : "Enter full name";
+    if (!isTeamEvent && form.fullName.trim().split(/\s+/).length < 2) nextErrors.fullName = "Enter full name";
     if (!form.email.includes("@")) nextErrors.email = "Invalid email";
     if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ""))) nextErrors.phone = "Invalid phone";
     if (!form.studentCollege.trim()) nextErrors.studentCollege = "Required";
     if (!form.studentDepartment.trim()) nextErrors.studentDepartment = "Required";
     if (!form.studentYear) nextErrors.studentYear = "Required";
     if (isTeamEvent) {
-      const maxAllowed = Math.max(1, Number(event?.teamSize || 1) - 1);
+      const maxAllowed = Math.max(1, Number(event?.teamSize || 1));
       const count = Math.max(1, Math.min(Number(memberCount || 1), maxAllowed));
       if (!Number.isFinite(count) || count < 1) nextErrors.memberCount = "Enter valid number of members";
       if (Number(memberCount || 1) > maxAllowed) nextErrors.memberCount = `Maximum ${maxAllowed} members allowed`;
@@ -352,7 +353,7 @@ const RegisterPage = () => {
             {step === 0 && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Full Name</label>
+                  <label className="text-sm text-muted-foreground mb-1 block">{isTeamEvent ? "Team Name" : "Full Name"}</label>
                   <input
                     id="reg-full-name"
                     className={inputClass}
@@ -361,7 +362,7 @@ const RegisterPage = () => {
                       setForm({ ...form, fullName: e.target.value });
                       clearError("fullName");
                     }}
-                    placeholder="John Doe"
+                    placeholder={isTeamEvent ? "Enter team name" : "John Doe"}
                   />
                   {errors.fullName && <p className="text-xs text-destructive mt-1">{errors.fullName}</p>}
                 </div>
@@ -456,11 +457,11 @@ const RegisterPage = () => {
                         className={`${inputClass} ${errors.memberCount ? "border-destructive" : ""}`}
                         type="number"
                         min={1}
-                        max={Math.max(1, Number(event?.teamSize || 1) - 1)}
+                        max={Math.max(1, Number(event?.teamSize || 1))}
                         value={memberCount}
                         onChange={(e) => {
                           setMemberCountTouched(true);
-                          const maxAllowed = Math.max(1, Number(event?.teamSize || 1) - 1);
+                          const maxAllowed = Math.max(1, Number(event?.teamSize || 1));
                           const raw = e.target.value.replace(/\D/g, "");
                           const count = Number(raw);
                           const clamped = Number.isFinite(count) && count > maxAllowed ? maxAllowed : count;
@@ -477,7 +478,7 @@ const RegisterPage = () => {
                         }}
                         onBlur={() => {
                           setMemberCountTouched(true);
-                          const maxAllowed = Math.max(1, Number(event?.teamSize || 1) - 1);
+                          const maxAllowed = Math.max(1, Number(event?.teamSize || 1));
                           const count = Math.max(1, Math.min(Number(memberCount || 1), maxAllowed));
                           setMemberCount(String(count));
                           setMemberNames((prev) => {
@@ -492,7 +493,7 @@ const RegisterPage = () => {
                     </div>
                     {memberCountTouched ? (
                       <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground mb-1 block">Member Names</label>
+                        <label className="text-sm text-muted-foreground mb-1 block">All Team Members</label>
                         {memberNames.map((name, index) => (
                           <input
                             key={`member-${index}`}
@@ -505,7 +506,7 @@ const RegisterPage = () => {
                               setMemberNames(next);
                               clearError("memberNames");
                             }}
-                            placeholder={`Member ${index + 1} name`}
+                            placeholder={`Team member ${index + 1} name`}
                           />
                         ))}
                         {errors.memberNames && <p className="text-xs text-destructive mt-1">{errors.memberNames}</p>}
@@ -577,7 +578,10 @@ const RegisterPage = () => {
                 </div>
                 <div className="rounded-xl border border-white/10 bg-card/30 p-5 text-left max-w-xl mx-auto space-y-2">
                   <p><span className="text-muted-foreground">Registration ID:</span> <span className="text-foreground">{savedRegistration.registrationId}</span></p>
-                  <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground">{savedRegistration.fullName}</span></p>
+                  <p><span className="text-muted-foreground">{isTeamEvent ? "Team Name:" : "Name:"}</span> <span className="text-foreground">{savedRegistration.fullName}</span></p>
+                  {isTeamEvent ? (
+                    <p><span className="text-muted-foreground">Team Members:</span> <span className="text-foreground">{savedRegistration.teamMembers}</span></p>
+                  ) : null}
                   <p><span className="text-muted-foreground">Event:</span> <span className="text-foreground">{savedRegistration.eventName}</span></p>
                   <p><span className="text-muted-foreground">Venue:</span> <span className="text-foreground">{savedRegistration.address}</span></p>
                   <p><span className="text-muted-foreground">Date:</span> <span className="text-foreground">{formatDateLabel(savedRegistration.time)}</span></p>

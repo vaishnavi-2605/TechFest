@@ -151,20 +151,7 @@ const PortalAuthPage = () => {
       <div className="container mx-auto px-4 max-w-5xl">
         <SectionHeader title="Event Portal" subtitle="Admin can login here. Coordinators can register and manage their events and participants." />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-8">
-          <div className="glass-card p-8 card-hover-glow">
-            <h3 className="font-heading text-2xl font-bold text-foreground mb-4">Add Event</h3>
-            <p className="text-lg text-muted-foreground mb-2">Want to create and publish a new event?</p>
-            <p className="text-lg text-muted-foreground mb-8">Login/Register as coordinator first.</p>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-secondary to-primary text-primary-foreground font-heading text-xl font-semibold shadow-[0_0_30px_hsl(187,94%,43%,0.25)]"
-            >
-              Add Event
-            </button>
-          </div>
-
+        <div className="max-w-2xl mx-auto">
           <form id="auth-form" onSubmit={handleSubmit} className="glass-card p-8 space-y-4">
             <div className="flex gap-3">
               <button

@@ -90,12 +90,13 @@ function isRegistrationClosed(timeText) {
   return new Date() >= cutoff;
 }
 
-function validateRegistration(body) {
+function validateRegistration(body, event) {
   const required = ["fullName", "email", "eventId", "studentCollege", "studentDepartment", "studentYear"];
   const missing = required.filter((key) => !String(body?.[key] || "").trim());
   if (missing.length) return `Missing required fields: ${missing.join(", ")}.`;
 
-  if (String(body.fullName).trim().split(/\s+/).length < 2) {
+  const isTeamEvent = Boolean(event?.isTeamEvent) || Number(event?.teamSize || 1) > 1;
+  if (!isTeamEvent && String(body.fullName).trim().split(/\s+/).length < 2) {
     return "Please enter full name (first and last name).";
   }
 
@@ -145,15 +146,15 @@ router.get("/", async (_req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const validationError = validateRegistration(req.body);
-    if (validationError) return res.status(400).json({ error: validationError });
-
     const event = await Event.findOne({
       eventId: String(req.body.eventId || "").trim(),
       $or: [{ status: "active" }, { status: { $exists: false } }]
     }).lean();
 
     if (!event) return res.status(404).json({ error: "Event not found or not active." });
+
+    const validationError = validateRegistration(req.body, event);
+    if (validationError) return res.status(400).json({ error: validationError });
 
     const selectedSubEvent = String(req.body.subEventId || "").trim()
       ? (event.subEvents || []).find((sub) => sub.subEventId === String(req.body.subEventId || "").trim())

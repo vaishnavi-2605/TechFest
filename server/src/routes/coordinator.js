@@ -137,6 +137,7 @@ router.get("/participants", async (req, res) => {
           .select({
             registrationId: 1,
             fullName: 1,
+            teamMembers: 1,
             email: 1,
             phone: 1,
             studentCollege: 1,

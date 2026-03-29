@@ -71,15 +71,22 @@ const Footer = () => {
 
           {showAddEventPromo ? (
             <div>
-              <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Add Event</h4>
-              <p className="text-sm text-muted-foreground mb-2">Want to create and publish a new event?</p>
-              <p className="text-sm text-muted-foreground mb-4">Login/Register as coordinator first.</p>
-              <Link
-                to="/portal"
-                className="inline-flex items-center justify-center px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg bg-gradient-to-r from-secondary to-primary text-primary-foreground font-heading font-semibold tracking-wide shadow-[0_0_20px_hsl(187,94%,43%,0.2)]"
-              >
-                Add Event
-              </Link>
+              <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Register/Login</h4>
+              <p className="text-sm text-muted-foreground mb-4">Choose how you want to continue.</p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/portal"
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg bg-gradient-to-r from-secondary to-primary text-primary-foreground font-heading font-semibold tracking-wide shadow-[0_0_20px_hsl(187,94%,43%,0.2)]"
+                >
+                  Register Event
+                </Link>
+                <Link
+                  to="/admin/login"
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm rounded-lg border border-white/15 text-foreground font-heading font-semibold tracking-wide hover:bg-white/5 transition-colors"
+                >
+                  Admin Login
+                </Link>
+              </div>
             </div>
           ) : (
             <div />
