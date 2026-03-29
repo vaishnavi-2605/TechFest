@@ -9,7 +9,7 @@ import { Check, ChevronLeft, ChevronRight, Image as ImageIcon, PartyPopper } fro
 
 const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
 const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:";
-const steps = ["Participant Details", "Payment", "Pass"];
+const steps = ["Participant Details", "Payment", "Join & Pass"];
 const departmentOptions = [
   "Computer Engineering",
   "Information Technology",
@@ -296,9 +296,17 @@ const RegisterPage = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
             <div className="max-w-md w-full rounded-2xl border border-white/10 bg-card/90 p-6 text-center shadow-xl">
               <h3 className="font-heading text-xl font-bold text-foreground mb-3">Registration Closed</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Registration closes 12 hours before the event. Please contact the coordinator for assistance.
+              <p className="text-sm text-muted-foreground mb-4">
+                Registration closed. Please contact the coordinator for assistance.
               </p>
+              <div className="rounded-xl border border-white/10 bg-card/40 p-4 mb-6 text-left">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-semibold">Coordinator:</span> {event?.guide || "Coordinator"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  <span className="text-foreground font-semibold">Phone:</span> {event?.guidePhone || "Not available"}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowClosedPopup(false)}
@@ -589,10 +597,12 @@ const RegisterPage = () => {
               <div className="text-center space-y-5">
                 <PartyPopper className="w-16 h-16 text-primary mx-auto" />
                 <div>
-                  <h3 className="font-heading text-2xl font-bold gradient-text mb-2">Pass Generated</h3>
+                  <h3 className="font-heading text-2xl font-bold gradient-text mb-2">
+                    {event?.whatsappGroupLink ? "Registration Complete" : "Pass Generated"}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {event?.whatsappGroupLink
-                      ? "Your registration is complete. Join the WhatsApp group first, then confirm your pass."
+                      ? "Your payment and registration are complete. Join the WhatsApp group first, then confirm your pass."
                       : "Your registration is complete and your event pass is ready."}
                   </p>
                 </div>
@@ -612,7 +622,7 @@ const RegisterPage = () => {
                     <div>
                       <h4 className="font-heading text-lg font-semibold text-foreground">Join Event WhatsApp Group</h4>
                       <p className="text-sm text-muted-foreground">
-                        Please join the coordinator's WhatsApp group before confirming your pass.
+                        The coordinator has shared this WhatsApp group for the event. Join it first, then confirm your pass.
                       </p>
                     </div>
                     <a
@@ -633,7 +643,7 @@ const RegisterPage = () => {
                           clearError("groupJoined");
                         }}
                       />
-                      I have joined the WhatsApp group.
+                      I have joined the WhatsApp group and I am ready to confirm my pass.
                     </label>
                     {errors.groupJoined && <p className="text-xs text-destructive">{errors.groupJoined}</p>}
                   </div>
@@ -682,7 +692,7 @@ const RegisterPage = () => {
               disabled={submitting || registrationClosed}
               className="px-8 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-70"
             >
-              {submitting ? "Generating..." : "Generate Pass"}
+              {submitting ? "Processing..." : "Complete Registration"}
             </button>
           ) : (
             <div />

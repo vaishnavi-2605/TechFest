@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Image as ImageIcon, Users, Trophy, Clock } from "lucide-react";
+import { Image as ImageIcon, Users, Trophy, Calendar } from "lucide-react";
 import RegisterAction from "@/components/RegisterAction";
-import { formatDescriptionText, resolveApiAssetUrl } from "@/data/helpers";
+import { formatDateLabel, formatDescriptionText, resolveApiAssetUrl } from "@/data/helpers";
 import { Event } from "@/types";
 
 const categoryColors = {
@@ -49,7 +49,7 @@ const EventCard = ({ event, index }: { event: Event; index: number }) => {
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {event.teamSize}</span>
         <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5 text-amber-400" /> ₹ {prizeText}</span>
-        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {event.deadline}</span>
+        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDateLabel(event.time)}</span>
       </div>
       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
         <Link
@@ -61,6 +61,8 @@ const EventCard = ({ event, index }: { event: Event; index: number }) => {
         <RegisterAction
           eventId={event.eventId}
           timeText={event.time}
+          coordinatorName={event.guide}
+          coordinatorPhone={event.guidePhone}
           label="Register"
           className="py-2.5 px-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground text-sm font-semibold text-center"
         />

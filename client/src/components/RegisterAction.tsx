@@ -6,11 +6,13 @@ import { isRegistrationClosed } from "@/data/helpers";
 type RegisterActionProps = {
   eventId?: string;
   timeText?: string;
+  coordinatorName?: string;
+  coordinatorPhone?: string;
   className: string;
   label?: string;
 };
 
-const RegisterAction = ({ eventId, timeText, className, label = "Register Now" }: RegisterActionProps) => {
+const RegisterAction = ({ eventId, timeText, coordinatorName, coordinatorPhone, className, label = "Register Now" }: RegisterActionProps) => {
   const navigate = useNavigate();
   const [showClosedPopup, setShowClosedPopup] = useState(false);
 
@@ -28,7 +30,12 @@ const RegisterAction = ({ eventId, timeText, className, label = "Register Now" }
       <button type="button" onClick={handleClick} className={className}>
         {label}
       </button>
-      <RegistrationClosedModal open={showClosedPopup} onClose={() => setShowClosedPopup(false)} />
+      <RegistrationClosedModal
+        open={showClosedPopup}
+        onClose={() => setShowClosedPopup(false)}
+        coordinatorName={coordinatorName}
+        coordinatorPhone={coordinatorPhone}
+      />
     </>
   );
 };

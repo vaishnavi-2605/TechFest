@@ -1,9 +1,11 @@
 type RegistrationClosedModalProps = {
   open: boolean;
   onClose: () => void;
+  coordinatorName?: string;
+  coordinatorPhone?: string;
 };
 
-const RegistrationClosedModal = ({ open, onClose }: RegistrationClosedModalProps) => {
+const RegistrationClosedModal = ({ open, onClose, coordinatorName, coordinatorPhone }: RegistrationClosedModalProps) => {
   if (!open) return null;
 
   return (
@@ -11,8 +13,16 @@ const RegistrationClosedModal = ({ open, onClose }: RegistrationClosedModalProps
       <div className="max-w-md w-full rounded-2xl border border-white/10 bg-card/90 p-6 text-center shadow-xl">
         <h3 className="font-heading text-xl font-bold text-foreground mb-3">Registration Closed</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          Registration closes 12 hours before the event. Please contact the coordinator for assistance.
+          Registration closed. Please contact the coordinator for assistance.
         </p>
+        <div className="rounded-xl border border-white/10 bg-card/40 p-4 mb-6 text-left">
+          <p className="text-sm text-muted-foreground">
+            <span className="text-foreground font-semibold">Coordinator:</span> {coordinatorName || "Coordinator"}
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            <span className="text-foreground font-semibold">Phone:</span> {coordinatorPhone || "Not available"}
+          </p>
+        </div>
         <button
           type="button"
           onClick={onClose}

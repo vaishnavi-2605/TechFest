@@ -247,6 +247,9 @@ const CoordinatorAddEventPage = () => {
                 value={form.whatsappGroupLink}
                 onChange={(e) => updateField("whatsappGroupLink", e.target.value)}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Participants will see this link after payment and must join the group before they can confirm their pass.
+              </p>
               {errors.whatsappGroupLink && <p className="text-xs text-destructive mt-1">{errors.whatsappGroupLink}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

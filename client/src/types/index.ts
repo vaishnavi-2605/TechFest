@@ -15,6 +15,7 @@ export interface Event {
   posterUrl?: string;
   address?: string;
   guide?: string;
+  guidePhone?: string;
   venue?: string;
   time?: string;
   day?: 1 | 2;

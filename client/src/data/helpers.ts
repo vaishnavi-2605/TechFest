@@ -205,6 +205,7 @@ export function formatBackendEvent(event: BackendEvent): Event {
     fee: event.fee,
     address: event.address,
     guide: event.guide,
+    guidePhone: event.guidePhone,
     venue: event.address,
     time: event.time,
   };
