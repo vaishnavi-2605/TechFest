@@ -580,7 +580,8 @@ const RegisterPage = () => {
                   <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground">{savedRegistration.fullName}</span></p>
                   <p><span className="text-muted-foreground">Event:</span> <span className="text-foreground">{savedRegistration.eventName}</span></p>
                   <p><span className="text-muted-foreground">Venue:</span> <span className="text-foreground">{savedRegistration.address}</span></p>
-                  <p><span className="text-muted-foreground">Time:</span> <span className="text-foreground">{savedRegistration.time}</span></p>
+                  <p><span className="text-muted-foreground">Date:</span> <span className="text-foreground">{formatDateLabel(savedRegistration.time)}</span></p>
+                  <p><span className="text-muted-foreground">Time:</span> <span className="text-foreground">{formatTimeLabel(savedRegistration.time)}</span></p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button

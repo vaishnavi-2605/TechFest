@@ -4,6 +4,43 @@ import { Eye, EyeOff } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import { login, registerCoordinator } from "@/data/api";
 import { saveAuth } from "@/data/auth";
+import { resolveApiAssetUrl } from "@/data/helpers";
+
+const COORDINATOR_DASHBOARD_CACHE_KEY = "techfestCoordinatorDashboardCache";
+
+function warmImage(url?: string) {
+  const src = resolveApiAssetUrl(url);
+  if (!src) return;
+  const image = new Image();
+  image.decoding = "async";
+  image.src = src;
+}
+
+function primeCoordinatorDashboardCache(user: Record<string, unknown>) {
+  if (String(user.role || "") !== "coordinator") return;
+
+  try {
+    sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
+      profile: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        department: user.department,
+        photoUrl: user.photoUrl,
+        coordinatorRole: user.coordinatorRole,
+        notifications: []
+      },
+      events: [],
+      participants: []
+    }));
+  } catch {
+    // ignore storage errors
+  }
+
+  warmImage(String(user.photoUrl || ""));
+}
 
 const departmentOptions = [
   "Computer Engineering",
@@ -85,6 +122,7 @@ const PortalAuthPage = () => {
 
       const auth = saveAuth(response);
       const role = String((auth.user as { role?: string })?.role || "");
+      primeCoordinatorDashboardCache((auth.user || {}) as Record<string, unknown>);
       if (role === "admin" || role === "super_admin") navigate("/admin/dashboard");
       else navigate("/coordinator/dashboard");
     } catch (error) {

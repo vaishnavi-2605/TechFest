@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Image as ImageIcon } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import SectionHeader from "@/components/SectionHeader";
 import { deleteAdminCoordinator, deleteAdminEvent, fetchAdminCoordinatorDetails, updateAdminEventStatus } from "@/data/api";
 import { getAuth } from "@/data/auth";
-import { resolveApiAssetUrl } from "@/data/helpers";
+import { formatDateLabel, resolveApiAssetUrl } from "@/data/helpers";
 
 type CoordinatorEvent = {
   id: string;
@@ -36,10 +36,26 @@ type CoordinatorDetails = {
   events?: CoordinatorEvent[];
 };
 
+const ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX = "techfestAdminCoordinatorPreview:";
+
+function getCachedCoordinatorPreview(id: string) {
+  try {
+    const cached = sessionStorage.getItem(`${ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX}${id}`);
+    return cached ? (JSON.parse(cached) as CoordinatorDetails) : null;
+  } catch {
+    return null;
+  }
+}
+
 const AdminCoordinatorDetailsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { coordinatorId = "" } = useParams();
-  const [details, setDetails] = useState<CoordinatorDetails | null>(null);
+  const routePreview = ((location.state as { coordinatorPreview?: CoordinatorDetails } | null)?.coordinatorPreview || null);
+  const [details, setDetails] = useState<CoordinatorDetails | null>(() => {
+    if (routePreview?.id === coordinatorId) return routePreview;
+    return getCachedCoordinatorPreview(coordinatorId);
+  });
   const [alert, setAlert] = useState("");
   const [busyEventId, setBusyEventId] = useState("");
   const [deletingEventId, setDeletingEventId] = useState("");
@@ -48,7 +64,15 @@ const AdminCoordinatorDetailsPage = () => {
 
   async function load() {
     const data = await fetchAdminCoordinatorDetails(coordinatorId);
-    setDetails((data.coordinator || null) as CoordinatorDetails | null);
+    const nextDetails = (data.coordinator || null) as CoordinatorDetails | null;
+    setDetails(nextDetails);
+    if (nextDetails?.id) {
+      try {
+        sessionStorage.setItem(`${ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX}${nextDetails.id}`, JSON.stringify(nextDetails));
+      } catch {
+        // ignore storage errors
+      }
+    }
   }
 
   useEffect(() => {
@@ -63,8 +87,15 @@ const AdminCoordinatorDetailsPage = () => {
       return;
     }
 
+    if (routePreview?.id === coordinatorId) {
+      setDetails(routePreview);
+    } else {
+      const cachedPreview = getCachedCoordinatorPreview(coordinatorId);
+      if (cachedPreview) setDetails(cachedPreview);
+    }
+
     load().catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load coordinator details."));
-  }, [navigate, coordinatorId]);
+  }, [navigate, coordinatorId, routePreview]);
 
   async function handleApproveEvent(eventDbId: string) {
     try {
@@ -143,23 +174,30 @@ const AdminCoordinatorDetailsPage = () => {
 
         <section className="glass-card p-6">
           <h2 className="font-heading text-lg font-bold text-foreground mb-4">Coordinator Information</h2>
-          <div className="grid grid-cols-[1fr_170px] sm:grid-cols-[1fr_200px] md:grid-cols-[1fr_220px] lg:grid-cols-[1fr_280px] gap-6 md:gap-8 items-start">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p><span className="text-foreground font-semibold">Name:</span> {details?.name || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Username:</span> {details?.username || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Role:</span> {details?.role || "Event Coordinator"}</p>
-              <p><span className="text-foreground font-semibold">Email:</span> {details?.email || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Phone:</span> {details?.phone || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Department:</span> {details?.department || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Status:</span> {details?.status || "N/A"}</p>
-              <p><span className="text-foreground font-semibold">Total Events:</span> {Number(details?.totalEvents || 0)}</p>
-              <p><span className="text-foreground font-semibold">Total Participants:</span> {Number(details?.totalParticipants || 0)}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] md:grid-cols-[1fr_220px] lg:grid-cols-[1fr_280px] gap-5 md:gap-8 items-start">
+            <div className="order-2 sm:order-1 space-y-2 text-xs sm:text-sm text-muted-foreground">
+              <p className="leading-snug"><span className="text-foreground font-semibold">Name:</span> {details?.name || "N/A"}</p>
+              <p className="leading-snug break-all sm:break-normal"><span className="text-foreground font-semibold">Username:</span> {details?.username || "N/A"}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Role:</span> {details?.role || "Event Coordinator"}</p>
+              <p className="leading-snug break-all sm:break-normal"><span className="text-foreground font-semibold">Email:</span> {details?.email || "N/A"}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Phone:</span> {details?.phone || "N/A"}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Department:</span> {details?.department || "N/A"}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Status:</span> {details?.status || "N/A"}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Total Events:</span> {Number(details?.totalEvents || 0)}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Total Participants:</span> {Number(details?.totalParticipants || 0)}</p>
             </div>
-            <div className="rounded-2xl overflow-hidden border border-white/10 bg-card/40 p-2">
+            <div className="order-1 sm:order-2 mx-auto w-full max-w-[150px] sm:max-w-none rounded-2xl overflow-hidden border border-white/10 bg-card/40 p-2">
               {resolveApiAssetUrl(details?.photoUrl) ? (
-                <img src={resolveApiAssetUrl(details?.photoUrl)} alt={details?.name || "Coordinator"} className="w-full h-[200px] sm:h-[220px] md:h-[220px] lg:h-[260px] object-contain" />
+                <img
+                  src={resolveApiAssetUrl(details?.photoUrl)}
+                  alt={details?.name || "Coordinator"}
+                  className="w-full h-[170px] sm:h-[220px] md:h-[220px] lg:h-[260px] object-contain"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                />
               ) : (
-                <div className="w-full h-[200px] sm:h-[220px] md:h-[220px] lg:h-[260px] bg-card/40 text-muted-foreground flex items-center justify-center">No Photo</div>
+                <div className="w-full h-[170px] sm:h-[220px] md:h-[220px] lg:h-[260px] bg-card/40 text-muted-foreground flex items-center justify-center">No Photo</div>
               )}
             </div>
           </div>
@@ -195,7 +233,7 @@ const AdminCoordinatorDetailsPage = () => {
                     </div>
                     <p className="text-sm text-muted-foreground">{event.description || "No description."}</p>
                     <p className="text-sm text-muted-foreground">
-                      {event.department || "N/A"} | {event.time || "To be announced"} | {event.address || "Venue TBD"}
+                      {event.department || "N/A"} | {formatDateLabel(event.time)} | {event.address || "Venue TBD"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Fee: ₹ {Number(event.fee || 0)} | Participants: {Number(event.participantCount || 0)}

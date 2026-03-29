@@ -82,15 +82,6 @@ export interface FAQItem {
   answer: string;
 }
 
-export interface ScheduleItem {
-  id: string;
-  time: string;
-  eventName: string;
-  venue: string;
-  category: "Technical" | "Non-Technical" | "Workshops";
-  day: 1 | 2;
-}
-
 export interface PublicCoordinator {
   id: string;
   name: string;

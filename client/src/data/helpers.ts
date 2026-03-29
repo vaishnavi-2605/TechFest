@@ -1,4 +1,4 @@
-import { BackendEvent, Event, ScheduleItem } from "@/types";
+import { BackendEvent, Event } from "@/types";
 
 const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 
@@ -49,6 +49,17 @@ export function parseEventDate(timeText?: string) {
 }
 
 export function formatDateLabel(timeText?: string) {
+  const parsed = parseEventDate(timeText);
+  if (!Number.isNaN(parsed.getTime())) {
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const year = String(parsed.getFullYear());
+    return `${day}/${month}/${year}`;
+  }
+  return String(timeText || "").split("|")[0].trim() || "To be announced";
+}
+
+export function formatShortDateLabel(timeText?: string) {
   const parsed = parseEventDate(timeText);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString("en-GB", {
@@ -171,7 +182,7 @@ export function formatBackendEvent(event: BackendEvent): Event {
     prize: event.displayPrize || (event.fee > 0 ? `₹ ${event.fee}` : "Free"),
     displayPrize: event.displayPrize || "",
     deadline: event.displayDeadline || (deadline
-      ? deadline.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+      ? `${String(deadline.getDate()).padStart(2, "0")}/${String(deadline.getMonth() + 1).padStart(2, "0")}/${deadline.getFullYear()}`
       : "Open"),
     posterUrl: resolveApiAssetUrl(event.posterUrl),
     department: event.department,
@@ -181,23 +192,6 @@ export function formatBackendEvent(event: BackendEvent): Event {
     venue: event.address,
     time: event.time,
   };
-}
-
-export function buildScheduleFromEvents(events: BackendEvent[]): ScheduleItem[] {
-  return events
-    .map((event, index) => {
-      const parsedDate = parseEventDate(event.time);
-      const baseDay = !Number.isNaN(parsedDate.getTime()) ? parsedDate.getDate() : index + 1;
-      return {
-        id: event.eventId,
-        time: formatTimeLabel(event.time),
-        eventName: event.title,
-        venue: event.address || "Venue to be announced",
-        category: getCategoryFromDepartment(event.department),
-        day: baseDay % 2 === 0 ? 2 : 1,
-      } satisfies ScheduleItem;
-    })
-    .sort((a, b) => a.time.localeCompare(b.time));
 }
 
 export function generateRegistrationId(eventId: string) {
@@ -243,7 +237,7 @@ export function openPrintPassWindow(passData: {
         <p><strong>Event:</strong> ${passData.eventName}</p>
         <p><strong>Department:</strong> ${passData.department || "N/A"}</p>
         <p><strong>Venue:</strong> ${passData.address || "To be announced"}</p>
-        <p><strong>Reporting Time:</strong> ${passData.time || "To be announced"}</p>
+        <p><strong>Reporting Time:</strong> ${passData.time ? `${formatDateLabel(passData.time)} | ${formatTimeLabel(passData.time)}` : "To be announced"}</p>
         <p><strong>Coordinator:</strong> ${passData.guide || "Coordinator"}</p>
         <p><strong>Coordinator Phone:</strong> ${passData.guidePhone || "N/A"}</p>
         <p><strong>Payment Ref:</strong> ${passData.paymentRef || "Not Required"}</p>

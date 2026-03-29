@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import { Image as ImageIcon, Search } from "lucide-react";
-import { parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
+import { formatDateLabel, parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
 import { deleteCoordinatorEvent, fetchCoordinatorMe, fetchCoordinatorParticipants, markCoordinatorNotificationsRead } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
 
@@ -46,7 +46,32 @@ type ParticipantRow = {
 const CoordinatorDashboardPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [profile, setProfile] = useState<CoordinatorProfile | null>(null);
+  const [profile, setProfile] = useState<CoordinatorProfile | null>(() => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(COORDINATOR_DASHBOARD_CACHE_KEY) || "null") as
+        | { profile?: CoordinatorProfile | null }
+        | null;
+      if (cached?.profile) return cached.profile;
+    } catch {
+      // ignore storage errors
+    }
+
+    const auth = getAuth();
+    const user = (auth?.user || {}) as Record<string, unknown>;
+    if (String(user.role || "") !== "coordinator") return null;
+
+    return {
+      id: String(user.id || ""),
+      name: String(user.name || ""),
+      username: String(user.username || ""),
+      email: String(user.email || ""),
+      phone: String(user.phone || ""),
+      department: String(user.department || ""),
+      photoUrl: String(user.photoUrl || ""),
+      coordinatorRole: String(user.coordinatorRole || "Event Coordinator"),
+      notifications: []
+    };
+  });
   const [events, setEvents] = useState<CoordinatorEvent[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [alert, setAlert] = useState("");
@@ -164,19 +189,26 @@ const CoordinatorDashboardPage = () => {
 
         <section className="glass-card p-6">
           <h3 className="font-heading text-lg font-bold text-foreground mb-4">Basic Information</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_200px] gap-4 items-start">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p><span className="text-foreground font-semibold">Name:</span> {String(profile?.name || "Coordinator")}</p>
-              <p><span className="text-foreground font-semibold">Username:</span> {String(profile?.username || "N/A")}</p>
-              <p><span className="text-foreground font-semibold">Role:</span> {String(profile?.coordinatorRole || "Event Coordinator")}</p>
-              <p><span className="text-foreground font-semibold">Email:</span> {String(profile?.email || "N/A")}</p>
-              <p><span className="text-foreground font-semibold">Phone:</span> {String(profile?.phone || "N/A")}</p>
-              <p><span className="text-foreground font-semibold">Department:</span> {String(profile?.department || "N/A")}</p>
-              <p><span className="text-foreground font-semibold">Total Events:</span> {totalEvents}</p>
-              <p><span className="text-foreground font-semibold">Total Participants:</span> {totalParticipants}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] md:grid-cols-[1fr_220px] lg:grid-cols-[1fr_280px] gap-5 md:gap-8 items-start">
+            <div className="order-2 sm:order-1 space-y-2 text-xs sm:text-sm text-muted-foreground">
+              <p className="leading-snug"><span className="text-foreground font-semibold">Name:</span> {String(profile?.name || "Coordinator")}</p>
+              <p className="leading-snug break-all sm:break-normal"><span className="text-foreground font-semibold">Username:</span> {String(profile?.username || "N/A")}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Role:</span> {String(profile?.coordinatorRole || "Event Coordinator")}</p>
+              <p className="leading-snug break-all sm:break-normal"><span className="text-foreground font-semibold">Email:</span> {String(profile?.email || "N/A")}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Phone:</span> {String(profile?.phone || "N/A")}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Department:</span> {String(profile?.department || "N/A")}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Total Events:</span> {totalEvents}</p>
+              <p className="leading-snug"><span className="text-foreground font-semibold">Total Participants:</span> {totalParticipants}</p>
             </div>
-            <div className="rounded-xl overflow-hidden border border-white/10 bg-card/40 p-2">
-              <img src={profilePhoto} alt="Coordinator profile" className="w-full h-40 object-contain" />
+            <div className="order-1 sm:order-2 mx-auto w-full max-w-[150px] sm:max-w-none rounded-xl overflow-hidden border border-white/10 bg-card/40 p-2">
+              <img
+                src={profilePhoto}
+                alt="Coordinator profile"
+                className="w-full h-[170px] sm:h-[220px] md:h-[220px] lg:h-[260px] object-contain"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
             </div>
           </div>
 
@@ -253,7 +285,7 @@ const CoordinatorDashboardPage = () => {
                       <span className="text-foreground font-semibold">Fee:</span> ₹ {Number(event.fee || 0)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      <span className="text-foreground font-semibold">Date:</span> {event.time || "To be announced"}
+                      <span className="text-foreground font-semibold">Date:</span> {formatDateLabel(event.time)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       <span className="text-foreground font-semibold">Venue:</span> {event.address || "To be announced"}

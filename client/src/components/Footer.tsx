@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
-import { Zap, Instagram, Twitter, Linkedin, Youtube, ArrowUp } from "lucide-react";
+import { Zap, Instagram, Linkedin, ArrowUp } from "lucide-react";
+
+const socialLinks = [
+  { icon: Instagram, href: "https://www.instagram.com/kbtcoe_techfest?igsh=djZpN2tlb2pkempv", label: "Instagram" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/mvps-s-kbt-college-of-engineering-nashik-1a8701241?utm_source=share_via&utm_content=profile&utm_medium=member_android", label: "LinkedIn" },
+];
 
 const Footer = () => {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
@@ -22,7 +27,7 @@ const Footer = () => {
           <div>
             <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Quick Links</h4>
             <div className="flex flex-col gap-2">
-              {["/events", "/schedule", "/team", "/register"].map((path) => (
+              {["/events", "/team", "/register", "/contact"].map((path) => (
                 <Link key={path} to={path} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   {path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
                 </Link>
@@ -32,15 +37,22 @@ const Footer = () => {
 
           <div>
             <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Contact</h4>
-            <p className="text-sm text-muted-foreground">techfest@mitcoe.edu.in</p>
-            <p className="text-sm text-muted-foreground mt-1">+91 98765 43210</p>
+            <p className="text-sm text-muted-foreground">kbtug23384@kbtcoe.org</p>
+            <p className="text-sm text-muted-foreground mt-1">+91 75880 12633</p>
           </div>
 
           <div>
             <h4 className="font-heading text-sm font-semibold mb-4 text-foreground">Follow Us</h4>
             <div className="flex gap-3">
-              {[Instagram, Twitter, Linkedin, Youtube].map((Icon, i) => (
-                <a key={i} href="#" className="p-2 rounded-lg bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all">
+              {socialLinks.map(({ icon: Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="p-2 rounded-lg bg-muted/50 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                >
                   <Icon className="w-5 h-5" />
                 </a>
               ))}

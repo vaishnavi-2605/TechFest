@@ -6,6 +6,23 @@ import { clearAuth, getAuth } from "@/data/auth";
 import { resolveApiAssetUrl } from "@/data/helpers";
 
 const ADMIN_DASHBOARD_CACHE_KEY = "techfestAdminDashboardCache";
+const ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX = "techfestAdminCoordinatorPreview:";
+
+function cacheCoordinatorPreview(id: string, preview: Record<string, unknown>) {
+  try {
+    sessionStorage.setItem(`${ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX}${id}`, JSON.stringify(preview));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function warmImage(url?: string) {
+  const src = resolveApiAssetUrl(url);
+  if (!src) return;
+  const image = new Image();
+  image.decoding = "async";
+  image.src = src;
+}
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -98,7 +115,7 @@ const AdminDashboardPage = () => {
           {loading && !coordinators.length ? (
             <p className="text-sm text-muted-foreground mb-4">Loading dashboard...</p>
           ) : null}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {coordinators.map((row) => {
             const item = row as {
               id: string;
@@ -112,32 +129,64 @@ const AdminDashboardPage = () => {
               role?: string;
               pendingEvents?: Array<{ id: string; title?: string; time?: string; fee?: number }>;
             };
+            const coordinatorPreview = {
+              id: item.id,
+              name: item.name,
+              department: item.department,
+              role: item.role,
+              photoUrl: item.photoUrl,
+              totalParticipants: item.participantCount || 0,
+              totalEvents: item.totalEvents || 0,
+              status: item.status || "N/A",
+              username: "",
+              email: "",
+              phone: "",
+              events: item.pendingEvents || [],
+            };
             return (
               <Link
                 to={`/admin/coordinators/${item.id}`}
+                state={{ coordinatorPreview }}
                 key={item.id}
-                className="glass-card p-6 card-hover-glow flex flex-col h-full"
+                className="glass-card p-4 sm:p-6 card-hover-glow flex h-full flex-col"
+                onClick={() => cacheCoordinatorPreview(item.id, coordinatorPreview)}
+                onMouseEnter={() => warmImage(item.photoUrl)}
+                onTouchStart={() => warmImage(item.photoUrl)}
               >
                 {resolveApiAssetUrl(item.photoUrl) ? (
-                  <img src={resolveApiAssetUrl(item.photoUrl)} alt={item.name} className="w-full h-44 object-cover rounded-xl border border-white/10 mb-4" />
+                  <img
+                    src={resolveApiAssetUrl(item.photoUrl)}
+                    alt={item.name}
+                    className="mb-4 h-40 w-full rounded-xl border border-white/10 object-cover sm:h-44"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
-                  <div className="w-full h-44 rounded-xl border border-white/10 bg-card/40 mb-4 flex items-center justify-center text-muted-foreground">
+                  <div className="mb-4 flex h-40 w-full items-center justify-center rounded-xl border border-white/10 bg-card/40 text-muted-foreground sm:h-44">
                     No Photo
                   </div>
                 )}
-                <div className="flex items-start justify-between gap-4 min-h-[72px]">
-                  <div className="min-w-0">
-                    <h3 className="font-heading text-lg font-bold text-foreground break-words">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground break-words">{item.department}</p>
-                    <p className="text-xs text-muted-foreground break-words">{item.role || "Event Coordinator"}</p>
+                <div className="min-h-[96px] sm:min-h-[112px]">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-heading text-sm font-bold leading-tight text-foreground break-words sm:text-base">
+                        {item.name}
+                      </h3>
+                    </div>
+                    {item.pendingCount && item.pendingCount > 0 ? (
+                      <span className="shrink-0 rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-400 sm:px-3 sm:text-xs">
+                        Pending
+                      </span>
+                    ) : null}
                   </div>
-                  {item.pendingCount && item.pendingCount > 0 ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400">
-                      Pending
-                    </span>
-                  ) : null}
+                  <div className="mt-0.5 min-w-0 sm:mt-1">
+                    <p className="text-sm leading-snug text-muted-foreground break-words">{item.department}</p>
+                    <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:mt-1">
+                      {item.role || "Event Coordinator"}
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-auto pt-4 space-y-2 text-sm text-muted-foreground">
+                <div className="mt-auto pt-2 sm:pt-4 space-y-1.5 text-sm text-muted-foreground">
                   <p>Participants: {item.participantCount || 0}</p>
                   <p>Events: {item.totalEvents || 0}</p>
                 </div>

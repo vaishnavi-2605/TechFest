@@ -1,9 +1,9 @@
 const Event = require("../models/Event");
 
 const guidePhoneByDepartment = {
-  Technical: "+91 98765 43210",
-  "Non-Technical": "+91 98765 43210",
-  Workshops: "+91 98765 43210",
+  Technical: "+91 75880 12633",
+  "Non-Technical": "+91 75880 12633",
+  Workshops: "+91 75880 12633",
 };
 
 const eventsSeed = [

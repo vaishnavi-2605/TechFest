@@ -9,7 +9,7 @@ import EventCard from "@/components/EventCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { sponsors } from "@/data/sampleData";
 import { fetchEvents } from "@/data/api";
-import { formatBackendEvent, formatDateLabel, parseEventDate } from "@/data/helpers";
+import { formatBackendEvent, formatShortDateLabel, parseEventDate } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-react";
 
@@ -129,13 +129,13 @@ const AboutSection = ({ stats }: { stats: { label: string; value: number; icon: 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, x: -30 }} animate={inView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.6 }}>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              TechFest 2026 is the annual techfest of KBT College of Engineering, Nashik — a two-day extravaganza bringing
-              together the brightest minds from colleges across India. With over 10 events spanning hackathons,
+              TechFest 2026 is the annual techfest of KBT College of Engineering, Nashik — a one-day extravaganza bringing
+              together the brightest minds from colleges across Nashik. With over 8 events spanning hackathons,
               robotics, AI, design, and more, TechFest is where innovation meets imagination.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Whether you're a coder, a designer, a robotics enthusiast, or a quiz master, there's something for everyone.
-              Join us for two days of intense competition, hands-on workshops, networking, and unforgettable experiences.
+              Join us for intense competition, hands-on workshops, networking, and unforgettable experiences.
             </p>
           </motion.div>
           <div className="grid grid-cols-2 gap-4">
@@ -261,7 +261,7 @@ const Index = () => {
   }, []);
 
   const latestEventDateLabel = useMemo(() => {
-    return latestEventTimeText ? formatDateLabel(latestEventTimeText) : "";
+    return latestEventTimeText ? formatShortDateLabel(latestEventTimeText) : "";
   }, [latestEventTimeText]);
 
   const stats = [

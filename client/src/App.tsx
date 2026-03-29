@@ -10,7 +10,6 @@ import Footer from "@/components/Footer";
 import Index from "./pages/Index";
 import EventsPage from "./pages/Events";
 import EventDetailsPage from "./pages/EventDetails";
-import SchedulePage from "./pages/Schedule";
 import TeamPage from "./pages/Team";
 import RegisterPage from "./pages/Register";
 import SponsorsPage from "./pages/Sponsors";
@@ -52,7 +51,6 @@ const AnimatedRoutes = () => {
           <Route path="/" element={<Index />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:eventId" element={<EventDetailsPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/sponsors" element={<SponsorsPage />} />

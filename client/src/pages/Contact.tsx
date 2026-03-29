@@ -41,8 +41,8 @@ const ContactPage = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
           {[
-            { icon: Mail, label: "Email", value: "techfest@college.edu" },
-            { icon: Phone, label: "Phone", value: "+91 98765 43210" },
+            { icon: Mail, label: "Email", value: "kbtug23384@kbtcoe.org" },
+            { icon: Phone, label: "Phone", value: "+91 75880 12633" },
             { icon: MapPin, label: "Venue", value: "KBT COE" },
           ].map(({ icon: Icon, label, value }, i) => (
             <motion.div
@@ -112,7 +112,7 @@ const ContactPage = () => {
                 <option value="Event Registration Help">Event Registration Help</option>
                 <option value="Payment Issue">Payment Issue</option>
                 <option value="Pass / Certificate Query">Pass / Certificate Query</option>
-                <option value="Event Schedule / Venue">Event Schedule / Venue</option>
+                <option value="Event Date / Venue">Event Date / Venue</option>
                 <option value="Coordinator Contact Request">Coordinator Contact Request</option>
                 <option value="Technical Website Issue">Technical Website Issue</option>
                 <option value="Sponsorship / Collaboration">Sponsorship / Collaboration</option>
