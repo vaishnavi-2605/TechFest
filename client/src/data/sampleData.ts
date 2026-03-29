@@ -1,4 +1,4 @@
-import { TeamMember, Sponsor, FAQItem } from "@/types";
+import { TeamMember, FAQItem } from "@/types";
 
 
 export const teamMembers: TeamMember[] = [
@@ -14,17 +14,6 @@ export const teamMembers: TeamMember[] = [
   { id: "10", name: "Meera Reddy", role: "Social Media Lead", team: "Marketing", avatar: "" },
   { id: "11", name: "Ishaan Gupta", role: "Design Head", team: "Design", avatar: "" },
   { id: "12", name: "Tanvi Bhatt", role: "UI/UX Designer", team: "Design", avatar: "" },
-];
-
-export const sponsors: Sponsor[] = [
-  { id: "1", name: "TechCorp", tier: "Title", logo: "", url: "#" },
-  { id: "2", name: "InnovateLabs", tier: "Gold", logo: "", url: "#" },
-  { id: "3", name: "CodeForge", tier: "Gold", logo: "", url: "#" },
-  { id: "4", name: "DataFlow", tier: "Gold", logo: "", url: "#" },
-  { id: "5", name: "CloudNine", tier: "Silver", logo: "", url: "#" },
-  { id: "6", name: "ByteWise", tier: "Silver", logo: "", url: "#" },
-  { id: "7", name: "NeuralNet", tier: "Silver", logo: "", url: "#" },
-  { id: "8", name: "PixelPerfect", tier: "Silver", logo: "", url: "#" },
 ];
 
 export const faqItems: FAQItem[] = [

@@ -7,10 +7,9 @@ import CountdownTimer from "@/components/CountdownTimer";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { sponsors } from "@/data/sampleData";
-import { fetchEvents } from "@/data/api";
-import { formatBackendEvent, formatShortDateLabel, parseEventDate } from "@/data/helpers";
-import { BackendEvent } from "@/types";
+import { fetchEvents, fetchEventStats, fetchSponsors } from "@/data/api";
+import { formatBackendEvent, formatShortDateLabel, parseEventDate, parseEventDateTime } from "@/data/helpers";
+import { BackendEvent, Sponsor } from "@/types";
 import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-react";
 
 const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
@@ -22,11 +21,12 @@ function matchesEventFilter(category: string, filter: (typeof eventFilterOptions
   return category === filter;
 }
 
-function getLatestEventTime(rows: BackendEvent[]) {
+function getUpcomingEventTime(rows: BackendEvent[]) {
+  const now = new Date();
   return rows
-    .map((event) => ({ raw: event.time, parsed: parseEventDate(event.time) }))
-    .filter((event) => event.raw && !Number.isNaN(event.parsed.getTime()))
-    .sort((a, b) => b.parsed.getTime() - a.parsed.getTime())[0]?.raw || "";
+    .map((event) => ({ raw: event.time, parsed: parseEventDateTime(event.time) || parseEventDate(event.time) }))
+    .filter((event) => event.raw && !Number.isNaN(event.parsed.getTime()) && event.parsed >= now)
+    .sort((a, b) => a.parsed.getTime() - b.parsed.getTime())[0]?.raw || "";
 }
 
 function getStoredNextEventTime() {
@@ -34,24 +34,37 @@ function getStoredNextEventTime() {
   return localStorage.getItem(NEXT_EVENT_STORAGE_KEY) || "";
 }
 
+function extractPrizeAmount(displayPrize?: string) {
+  const matches = String(displayPrize || "").match(/[\d,]+/g) || [];
+  return matches.reduce((sum, value) => sum + Number(String(value).replace(/,/g, "")), 0);
+}
+
 const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
   const { ref, inView } = useInView({ triggerOnce: true });
   const [count, setCount] = useState(0);
 
-  if (inView && count === 0) {
+  useEffect(() => {
+    if (!inView) return;
+    if (value <= 0) {
+      setCount(0);
+      return;
+    }
+
     let start = 0;
-    const duration = 2000;
-    const step = value / (duration / 16 || 1);
-    const timer = setInterval(() => {
+    const duration = 1200;
+    const step = Math.max(value / (duration / 16 || 1), value <= 10 ? 1 : 0);
+    const timer = window.setInterval(() => {
       start += step;
       if (start >= value) {
         setCount(value);
-        clearInterval(timer);
+        window.clearInterval(timer);
       } else {
         setCount(Math.floor(start));
       }
     }, 16);
-  }
+
+    return () => window.clearInterval(timer);
+  }, [inView, value]);
 
   return (
     <span ref={ref} className="font-heading text-3xl md:text-4xl font-bold gradient-text">
@@ -219,8 +232,9 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
   );
 };
 
-const SponsorsStrip = () => {
+const SponsorsStrip = ({ sponsors }: { sponsors: Sponsor[] }) => {
   const allSponsors = [...sponsors, ...sponsors];
+  if (!sponsors.length) return null;
   return (
     <section className="py-16 overflow-hidden">
       <div className="container mx-auto px-4 mb-8">
@@ -230,9 +244,20 @@ const SponsorsStrip = () => {
         <div className="flex marquee gap-12 items-center">
           {allSponsors.map((s, i) => (
             <div key={`${s.id}-${i}`} className="flex-shrink-0 glass-card px-8 py-4 min-w-[160px] text-center grayscale hover:grayscale-0 transition-all duration-300 hover:scale-105">
-              <span className={`font-heading font-bold ${s.tier === "Title" ? "text-xl text-primary" : s.tier === "Gold" ? "text-lg text-amber-400" : "text-base text-muted-foreground"}`}>
-                {s.name}
-              </span>
+              {s.url ? (
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`font-heading font-bold ${s.tier === "Title" ? "text-xl text-primary" : s.tier === "Gold" ? "text-lg text-amber-400" : "text-base text-muted-foreground"}`}
+                >
+                  {s.name}
+                </a>
+              ) : (
+                <span className={`font-heading font-bold ${s.tier === "Title" ? "text-xl text-primary" : s.tier === "Gold" ? "text-lg text-amber-400" : "text-base text-muted-foreground"}`}>
+                  {s.name}
+                </span>
+              )}
               <p className="text-xs text-muted-foreground mt-1">{s.tier} Sponsor</p>
             </div>
           ))}
@@ -244,6 +269,13 @@ const SponsorsStrip = () => {
 
 const Index = () => {
   const [events, setEvents] = useState<BackendEvent[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [liveStats, setLiveStats] = useState({
+    eventCount: 0,
+    participantCount: 0,
+    prizePool: 0,
+    sponsorCount: 0,
+  });
   const [latestEventTimeText, setLatestEventTimeText] = useState(() => getStoredNextEventTime());
 
   useEffect(() => {
@@ -251,24 +283,42 @@ const Index = () => {
       .then((data) => {
         const rows = data.events || [];
         setEvents(rows);
-        const latest = getLatestEventTime(rows);
-        if (latest) {
-          setLatestEventTimeText(latest);
-          localStorage.setItem(NEXT_EVENT_STORAGE_KEY, latest);
+        const upcoming = getUpcomingEventTime(rows);
+        if (upcoming) {
+          setLatestEventTimeText(upcoming);
+          localStorage.setItem(NEXT_EVENT_STORAGE_KEY, upcoming);
         }
       })
       .catch(() => setEvents([]));
+
+    fetchSponsors()
+      .then((data) => setSponsors(data.sponsors || []))
+      .catch(() => setSponsors([]));
+
+    fetchEventStats()
+      .then((data) => setLiveStats(data.stats || { eventCount: 0, participantCount: 0, prizePool: 0, sponsorCount: 0 }))
+      .catch(() => setLiveStats({ eventCount: 0, participantCount: 0, prizePool: 0, sponsorCount: 0 }));
   }, []);
 
   const latestEventDateLabel = useMemo(() => {
     return latestEventTimeText ? formatShortDateLabel(latestEventTimeText) : "";
   }, [latestEventTimeText]);
 
+  const mergedStats = useMemo(() => {
+    const fallbackPrizePool = events.reduce((sum, event) => sum + extractPrizeAmount(event.displayPrize), 0);
+    return {
+      eventCount: Math.max(liveStats.eventCount, events.length),
+      participantCount: liveStats.participantCount,
+      prizePool: Math.max(liveStats.prizePool, fallbackPrizePool),
+      sponsorCount: Math.max(liveStats.sponsorCount, sponsors.length),
+    };
+  }, [events, liveStats, sponsors]);
+
   const stats = [
-    { label: "Events", value: events.length, icon: Sparkles },
-    { label: "Expected Participants", value: Math.max(events.length * 50, 0), icon: Users },
-    { label: "Prize Pool", value: events.reduce((sum, event) => sum + Number(event.fee || 0), 0), prefix: "₹ ", icon: Trophy },
-    { label: "Sponsors", value: sponsors.length, icon: ChevronRight },
+    { label: "Events", value: mergedStats.eventCount, icon: Sparkles },
+    { label: "Expected Participants", value: mergedStats.participantCount, icon: Users },
+    { label: "Prize Pool", value: mergedStats.prizePool, prefix: "₹ ", icon: Trophy },
+    { label: "Sponsors", value: mergedStats.sponsorCount, icon: ChevronRight },
   ];
 
   return (
@@ -276,7 +326,7 @@ const Index = () => {
       <HeroSection nextEventDate={latestEventDateLabel} nextEventTimeText={latestEventTimeText} />
       <AboutSection stats={stats} />
       <EventsPreview events={events} />
-      <SponsorsStrip />
+      <SponsorsStrip sponsors={sponsors} />
     </div>
   );
 };

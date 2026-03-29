@@ -14,6 +14,7 @@ const authRouter = require("./routes/auth");
 const adminRouter = require("./routes/admin");
 const coordinatorRouter = require("./routes/coordinator");
 const contactRouter = require("./routes/contact");
+const sponsorsRouter = require("./routes/sponsors");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -48,6 +49,7 @@ app.use("/api/registrations", registrationsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/coordinator", coordinatorRouter);
 app.use("/api/contact", contactRouter);
+app.use("/api/sponsors", sponsorsRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Route not found." });

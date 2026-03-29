@@ -15,6 +15,7 @@ import RegisterPage from "./pages/Register";
 import SponsorsPage from "./pages/Sponsors";
 import ContactPage from "./pages/Contact";
 import PortalAuthPage from "./pages/PortalAuth";
+import AdminLoginPage from "./pages/AdminLogin";
 import AdminDashboardPage from "./pages/AdminDashboard";
 import AdminMessagesPage from "./pages/AdminMessages";
 import AdminCoordinatorDetailsPage from "./pages/AdminCoordinatorDetails";
@@ -56,6 +57,7 @@ const AnimatedRoutes = () => {
           <Route path="/sponsors" element={<SponsorsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/portal" element={<PortalAuthPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/coordinators/:coordinatorId" element={<AdminCoordinatorDetailsPage />} />
           <Route path="/admin/messages" element={<AdminMessagesPage />} />

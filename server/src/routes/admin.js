@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Event = require("../models/Event");
 const Registration = require("../models/Registration");
 const ContactMessage = require("../models/ContactMessage");
+const Sponsor = require("../models/Sponsor");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { getResolvedImageUrl } = require("../utils/imageStorage");
 
@@ -237,7 +238,7 @@ router.delete("/messages/:id", async (req, res) => {
 
 router.delete("/coordinators/:id", async (req, res) => {
   try {
-    const coordinator = await User.findOne({ _id: req.params.id, role: "coordinator" }).lean();
+    const coordinator = await User.findOne({ _id: req.params.id, role: "coordinator" });
     if (!coordinator) return res.status(404).json({ error: "Coordinator not found." });
 
     const coordinatorEvents = await Event.find({ coordinatorId: coordinator._id }).lean();
@@ -247,9 +248,12 @@ router.delete("/coordinators/:id", async (req, res) => {
     if (eventPublicIds.length) {
       await Registration.deleteMany({ eventId: { $in: eventPublicIds } });
     }
-    await User.deleteOne({ _id: coordinator._id });
+    await Sponsor.deleteMany({ coordinatorId: coordinator._id });
+    coordinator.isActive = false;
+    coordinator.notifications = [];
+    await coordinator.save();
 
-    return res.json({ message: "Coordinator deleted." });
+    return res.json({ message: "Coordinator deactivated." });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to delete coordinator." });
   }

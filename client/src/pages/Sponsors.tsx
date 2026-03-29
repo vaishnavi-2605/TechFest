@@ -1,6 +1,8 @@
 import SectionHeader from "@/components/SectionHeader";
-import { sponsors } from "@/data/sampleData";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { fetchSponsors } from "@/data/api";
+import { Sponsor } from "@/types";
 
 const tiers = ["Title", "Gold", "Silver"] as const;
 const tierStyles = {
@@ -10,6 +12,14 @@ const tierStyles = {
 };
 
 const SponsorsPage = () => {
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+
+  useEffect(() => {
+    fetchSponsors()
+      .then((data) => setSponsors(data.sponsors || []))
+      .catch(() => setSponsors([]));
+  }, []);
+
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4">
@@ -35,7 +45,13 @@ const SponsorsPage = () => {
                       tier === "Title" ? "max-w-md mx-auto py-12" : ""
                     }`}
                   >
-                    <span className={`font-heading font-bold ${tierStyles[tier]}`}>{s.name}</span>
+                    {s.url ? (
+                      <a href={s.url} target="_blank" rel="noreferrer" className={`font-heading font-bold ${tierStyles[tier]}`}>
+                        {s.name}
+                      </a>
+                    ) : (
+                      <span className={`font-heading font-bold ${tierStyles[tier]}`}>{s.name}</span>
+                    )}
                     <p className="text-xs text-muted-foreground mt-2">{tier} Sponsor</p>
                   </motion.div>
                 ))}
@@ -43,6 +59,11 @@ const SponsorsPage = () => {
             </div>
           );
         })}
+        {!sponsors.length ? (
+          <div className="glass-card p-8 text-center text-muted-foreground">
+            Sponsors will appear here once coordinators add them from the dashboard.
+          </div>
+        ) : null}
       </div>
     </div>
   );

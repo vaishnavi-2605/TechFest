@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getAuth } from "@/data/auth";
 
 const navLinks = [
   { path: "/", label: "Home" },
@@ -14,6 +15,7 @@ const navLinks = [
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dashboardPath, setDashboardPath] = useState("");
   const location = useLocation();
 
   useEffect(() => {
@@ -24,6 +26,17 @@ const Navbar = () => {
 
   useEffect(() => {
     setMobileOpen(false);
+    const auth = getAuth();
+    const role = String((auth?.user as { role?: string } | undefined)?.role || "");
+    if (role === "admin" || role === "super_admin") {
+      setDashboardPath("/admin/dashboard");
+      return;
+    }
+    if (role === "coordinator") {
+      setDashboardPath("/coordinator/dashboard");
+      return;
+    }
+    setDashboardPath("");
   }, [location]);
 
   return (
@@ -63,12 +76,29 @@ const Navbar = () => {
           ))}
         </div>
 
-        <Link
-          to="/events"
-          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold tracking-wide transition-all hover:shadow-[0_0_25px_hsl(263,84%,58%,0.4)] hover:scale-105"
-        >
-          Register Now
-        </Link>
+        <div className="hidden md:flex items-center gap-3">
+          {dashboardPath ? (
+            <Link
+              to={dashboardPath}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-white/15 text-muted-foreground font-heading text-sm font-semibold tracking-wide transition-all hover:border-primary/40 hover:text-foreground hover:bg-primary/10"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              to="/admin/login"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-white/15 text-muted-foreground font-heading text-sm font-semibold tracking-wide transition-all hover:border-primary/40 hover:text-foreground hover:bg-primary/10"
+            >
+              Admin Login
+            </Link>
+          )}
+          <Link
+            to="/events"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold tracking-wide transition-all hover:shadow-[0_0_25px_hsl(263,84%,58%,0.4)] hover:scale-105"
+          >
+            Register Now
+          </Link>
+        </div>
 
         {/* Mobile Toggle */}
         <button
@@ -123,6 +153,21 @@ const Navbar = () => {
                 transition={{ delay: 0.3 }}
                 className="mt-4"
               >
+                {dashboardPath ? (
+                  <Link
+                    to={dashboardPath}
+                    className="block text-center py-3 px-4 rounded-lg border border-white/15 text-muted-foreground font-heading text-sm font-semibold tracking-wide mb-3"
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <Link
+                    to="/admin/login"
+                    className="block text-center py-3 px-4 rounded-lg border border-white/15 text-muted-foreground font-heading text-sm font-semibold tracking-wide mb-3"
+                  >
+                    Admin Login
+                  </Link>
+                )}
                 <Link
                   to="/events"
                   className="block text-center py-3 px-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-heading text-sm font-semibold tracking-wide"

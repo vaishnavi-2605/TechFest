@@ -71,7 +71,7 @@ export interface TeamMember {
 export interface Sponsor {
   id: string;
   name: string;
-  logo: string;
+  logo?: string;
   tier: "Title" | "Gold" | "Silver";
   url?: string;
 }

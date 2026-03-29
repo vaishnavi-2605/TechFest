@@ -1,4 +1,4 @@
-import { BackendEvent } from "@/types";
+import { BackendEvent, Sponsor } from "@/types";
 
 const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 
@@ -46,12 +46,20 @@ export function fetchEvents() {
   return request<{ events: BackendEvent[] }>("/api/events");
 }
 
+export function fetchEventStats() {
+  return request<{ stats: { eventCount: number; participantCount: number; sponsorCount: number; prizePool: number } }>("/api/events/stats");
+}
+
 export function fetchEvent(eventId: string) {
   return request<{ event: BackendEvent }>(`/api/events/${eventId}`);
 }
 
 export function fetchPublicCoordinators() {
   return request<{ coordinators: Record<string, unknown>[] }>("/api/events/coordinators/public");
+}
+
+export function fetchSponsors() {
+  return request<{ sponsors: Sponsor[] }>("/api/sponsors");
 }
 
 export function createRegistration(payload: Record<string, unknown>) {
@@ -157,6 +165,27 @@ export function markCoordinatorNotificationsRead() {
 
 export function fetchCoordinatorParticipants() {
   return request<{ participants: Record<string, unknown>[] }>("/api/coordinator/participants", {
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function fetchCoordinatorSponsors() {
+  return request<{ sponsors: Sponsor[] }>("/api/coordinator/sponsors", {
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function addCoordinatorSponsor(payload: { name: string; tier: Sponsor["tier"]; url?: string }) {
+  return request<{ message: string; sponsor: Sponsor }>("/api/coordinator/sponsors", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function deleteCoordinatorSponsor(id: string) {
+  return request<{ message: string }>(`/api/coordinator/sponsors/${id}`, {
+    method: "DELETE",
     useAuth: true,
   } as RequestInit & { useAuth: boolean });
 }

@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Event = require("../models/Event");
 const Registration = require("../models/Registration");
+const Sponsor = require("../models/Sponsor");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { upload } = require("../utils/upload");
 const { buildImageUrl, setStoredImage, setImageFromBodyValue, getResolvedImageUrl } = require("../utils/imageStorage");
@@ -151,6 +152,69 @@ router.get("/participants", async (req, res) => {
     return res.json({ participants });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to load participants." });
+  }
+});
+
+router.get("/sponsors", async (req, res) => {
+  try {
+    const sponsors = await Sponsor.find({ coordinatorId: req.user.id }).sort({ createdAt: 1 }).lean();
+    return res.json({
+      sponsors: sponsors.map((sponsor) => ({
+        id: sponsor._id,
+        name: sponsor.name,
+        tier: sponsor.tier,
+        url: sponsor.url || "",
+        logo: ""
+      }))
+    });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to load sponsors." });
+  }
+});
+
+router.post("/sponsors", async (req, res) => {
+  try {
+    const { name, tier, url } = req.body || {};
+    const normalizedName = String(name || "").trim();
+    const normalizedTier = String(tier || "Silver").trim();
+    const normalizedUrl = String(url || "").trim();
+
+    if (!normalizedName) {
+      return res.status(400).json({ error: "Sponsor name is required." });
+    }
+    if (!["Title", "Gold", "Silver"].includes(normalizedTier)) {
+      return res.status(400).json({ error: "Sponsor tier must be Title, Gold, or Silver." });
+    }
+
+    const sponsor = await Sponsor.create({
+      name: normalizedName,
+      tier: normalizedTier,
+      url: normalizedUrl,
+      coordinatorId: req.user.id
+    });
+
+    return res.status(201).json({
+      message: "Sponsor added.",
+      sponsor: {
+        id: sponsor._id,
+        name: sponsor.name,
+        tier: sponsor.tier,
+        url: sponsor.url || "",
+        logo: ""
+      }
+    });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to add sponsor." });
+  }
+});
+
+router.delete("/sponsors/:id", async (req, res) => {
+  try {
+    const sponsor = await Sponsor.findOneAndDelete({ _id: req.params.id, coordinatorId: req.user.id }).lean();
+    if (!sponsor) return res.status(404).json({ error: "Sponsor not found." });
+    return res.json({ message: "Sponsor deleted." });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to delete sponsor." });
   }
 });
 

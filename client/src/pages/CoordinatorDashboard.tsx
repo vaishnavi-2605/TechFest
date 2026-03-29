@@ -3,10 +3,16 @@ import { useLocation, useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import { Image as ImageIcon, Search } from "lucide-react";
 import { formatDateLabel, parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
-import { deleteCoordinatorEvent, fetchCoordinatorMe, fetchCoordinatorParticipants, markCoordinatorNotificationsRead } from "@/data/api";
+import { addCoordinatorSponsor, deleteCoordinatorEvent, deleteCoordinatorSponsor, fetchCoordinatorMe, fetchCoordinatorParticipants, fetchCoordinatorSponsors, markCoordinatorNotificationsRead } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
+import { Sponsor } from "@/types";
 
 const COORDINATOR_DASHBOARD_CACHE_KEY = "techfestCoordinatorDashboardCache";
+const sponsorTierStyles = {
+  Title: "text-2xl text-primary glow-text-violet",
+  Gold: "text-lg text-amber-400",
+  Silver: "text-base text-muted-foreground",
+} satisfies Record<Sponsor["tier"], string>;
 
 type CoordinatorProfile = {
   id?: string;
@@ -73,21 +79,25 @@ const CoordinatorDashboardPage = () => {
     };
   });
   const [events, setEvents] = useState<CoordinatorEvent[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [alert, setAlert] = useState("");
   const [participantQuery, setParticipantQuery] = useState("");
+  const [sponsorForm, setSponsorForm] = useState({ name: "", tier: "Silver" as Sponsor["tier"], url: "" });
+  const [savingSponsor, setSavingSponsor] = useState(false);
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   function hydrateFromCache() {
     try {
       const cached = JSON.parse(sessionStorage.getItem(COORDINATOR_DASHBOARD_CACHE_KEY) || "null") as
-        | { profile?: CoordinatorProfile | null; events?: CoordinatorEvent[]; participants?: ParticipantRow[] }
+        | { profile?: CoordinatorProfile | null; events?: CoordinatorEvent[]; participants?: ParticipantRow[]; sponsors?: Sponsor[] }
         | null;
       if (!cached) return false;
       setProfile(cached.profile || null);
       setEvents(cached.events || []);
       setParticipants(cached.participants || []);
+      setSponsors(cached.sponsors || []);
       return true;
     } catch {
       return false;
@@ -97,17 +107,20 @@ const CoordinatorDashboardPage = () => {
   async function load() {
     setLoading(true);
     try {
-      const [me, participantData] = await Promise.all([fetchCoordinatorMe(), fetchCoordinatorParticipants()]);
+      const [me, participantData, sponsorData] = await Promise.all([fetchCoordinatorMe(), fetchCoordinatorParticipants(), fetchCoordinatorSponsors()]);
       const coordinator = (me.coordinator || null) as CoordinatorProfile | null;
       const nextEvents = (me.events || []) as CoordinatorEvent[];
       const nextParticipants = (participantData.participants || []) as ParticipantRow[];
+      const nextSponsors = sponsorData.sponsors || [];
       setProfile(coordinator);
       setEvents(nextEvents);
       setParticipants(nextParticipants);
+      setSponsors(nextSponsors);
       sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
         profile: coordinator,
         events: nextEvents,
-        participants: nextParticipants
+        participants: nextParticipants,
+        sponsors: nextSponsors
       }));
 
       const notifications = coordinator?.notifications || [];
@@ -130,6 +143,39 @@ const CoordinatorDashboardPage = () => {
       setAlert("Event deleted successfully.");
     } catch (error) {
       setAlert(error instanceof Error ? error.message : "Failed to delete event.");
+    }
+  }
+
+  async function handleAddSponsor(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    try {
+      setSavingSponsor(true);
+      setAlert("");
+      await addCoordinatorSponsor({
+        name: sponsorForm.name,
+        tier: sponsorForm.tier,
+        url: sponsorForm.url
+      });
+      setSponsorForm({ name: "", tier: "Silver", url: "" });
+      await load();
+      setAlert("Sponsor added successfully.");
+    } catch (error) {
+      setAlert(error instanceof Error ? error.message : "Failed to add sponsor.");
+    } finally {
+      setSavingSponsor(false);
+    }
+  }
+
+  async function handleDeleteSponsor(sponsorId: string) {
+    const ok = window.confirm("Delete this sponsor?");
+    if (!ok) return;
+    try {
+      setAlert("");
+      await deleteCoordinatorSponsor(sponsorId);
+      await load();
+      setAlert("Sponsor deleted successfully.");
+    } catch (error) {
+      setAlert(error instanceof Error ? error.message : "Failed to delete sponsor.");
     }
   }
 
@@ -318,6 +364,99 @@ const CoordinatorDashboardPage = () => {
               </div>
             ) : null}
           </div>
+        </section>
+
+        <section className="glass-card p-6 space-y-6">
+          <div>
+            <h3 className="font-heading text-lg font-bold text-foreground mb-1">Sponsors</h3>
+            <p className="text-sm text-muted-foreground">Add sponsors using the same tier format shown on the public sponsors sections.</p>
+          </div>
+
+          <form onSubmit={handleAddSponsor} className="grid grid-cols-1 md:grid-cols-[1.2fr_180px_1fr_auto] gap-4 items-end">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Sponsor Name</label>
+              <input
+                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
+                placeholder="Sponsor name"
+                value={sponsorForm.name}
+                onChange={(e) => setSponsorForm((prev) => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Type</label>
+              <select
+                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
+                value={sponsorForm.tier}
+                onChange={(e) => setSponsorForm((prev) => ({ ...prev, tier: e.target.value as Sponsor["tier"] }))}
+              >
+                <option value="Title">Title</option>
+                <option value="Gold">Gold</option>
+                <option value="Silver">Silver</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Website Link (optional)</label>
+              <input
+                className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
+                placeholder="https://example.com"
+                value={sponsorForm.url}
+                onChange={(e) => setSponsorForm((prev) => ({ ...prev, url: e.target.value }))}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingSponsor}
+              className="px-5 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold disabled:opacity-70"
+            >
+              {savingSponsor ? "Adding..." : "Add Sponsor"}
+            </button>
+          </form>
+
+          {(["Title", "Gold", "Silver"] as Sponsor["tier"][]).map((tier) => {
+            const items = sponsors.filter((sponsor) => sponsor.tier === tier);
+            if (!items.length) return null;
+
+            return (
+              <div key={tier}>
+                <h4 className="font-heading text-base font-bold text-foreground mb-4">{tier} Sponsors</h4>
+                <div className={`grid gap-6 justify-items-center ${
+                  tier === "Title" ? "grid-cols-1" : tier === "Gold" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
+                }`}>
+                  {items.map((sponsor) => (
+                    <div
+                      key={sponsor.id}
+                      className={`glass-card card-hover-glow p-8 w-full text-center grayscale hover:grayscale-0 transition-all duration-300 ${
+                        tier === "Title" ? "max-w-md mx-auto py-12" : ""
+                      }`}
+                    >
+                      {sponsor.url ? (
+                        <a href={sponsor.url} target="_blank" rel="noreferrer" className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>
+                          {sponsor.name}
+                        </a>
+                      ) : (
+                        <span className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>{sponsor.name}</span>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">{tier} Sponsor</p>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSponsor(sponsor.id)}
+                        className="mt-4 px-4 py-2 rounded-full text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
+                      >
+                        Delete Sponsor
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {!sponsors.length ? (
+            <div className="rounded-xl border border-white/10 bg-card/40 p-4 text-muted-foreground">
+              No sponsors added yet.
+            </div>
+          ) : null}
         </section>
 
         <section className="glass-card p-6">

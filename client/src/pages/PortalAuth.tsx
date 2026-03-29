@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import { login, registerCoordinator } from "@/data/api";
@@ -74,7 +74,10 @@ const coordinatorRoleOptions = [
 
 const PortalAuthPage = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<"login" | "register">(
+    searchParams.get("mode") === "register" ? "register" : "login"
+  );
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -94,6 +97,17 @@ const PortalAuthPage = () => {
     setAlert("");
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  useEffect(() => {
+    const nextMode = searchParams.get("mode") === "register" ? "register" : "login";
+    setMode(nextMode);
+
+    if (window.location.hash === "#auth-form") {
+      requestAnimationFrame(() => {
+        document.getElementById("auth-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -151,7 +165,7 @@ const PortalAuthPage = () => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="glass-card p-8 space-y-4">
+          <form id="auth-form" onSubmit={handleSubmit} className="glass-card p-8 space-y-4">
             <div className="flex gap-3">
               <button
                 type="button"

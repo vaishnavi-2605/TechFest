@@ -1,9 +1,25 @@
 const express = require("express");
 const Event = require("../models/Event");
 const User = require("../models/User");
+const Registration = require("../models/Registration");
+const Sponsor = require("../models/Sponsor");
 const { getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
+
+function getActiveEventQuery() {
+  return {
+    $or: [
+      { status: "active" },
+      { status: { $exists: false } }
+    ]
+  };
+}
+
+function extractPrizeAmount(displayPrize) {
+  const matches = String(displayPrize || "").match(/[\d,]+/g) || [];
+  return matches.reduce((sum, value) => sum + Number(String(value).replace(/,/g, "")), 0);
+}
 
 router.get("/coordinators/public", async (req, res) => {
   try {
@@ -45,12 +61,7 @@ router.get("/coordinators/public", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const events = await Event.find({
-      $or: [
-        { status: "active" },
-        { status: { $exists: false } }
-      ]
-    }).sort({ department: 1, title: 1 }).lean();
+    const events = await Event.find(getActiveEventQuery()).sort({ department: 1, title: 1 }).lean();
     res.json({
       events: events.map((event) => ({
         ...event,
@@ -63,14 +74,33 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/stats", async (_req, res) => {
+  try {
+    const events = await Event.find(getActiveEventQuery()).select({ eventId: 1, displayPrize: 1 }).lean();
+    const eventIds = events.map((event) => String(event.eventId || "")).filter(Boolean);
+    const [participantCount, sponsorCount] = await Promise.all([
+      eventIds.length ? Registration.countDocuments({ eventId: { $in: eventIds } }) : 0,
+      Sponsor.countDocuments()
+    ]);
+
+    return res.json({
+      stats: {
+        eventCount: events.length,
+        participantCount: Number(participantCount || 0),
+        sponsorCount: Number(sponsorCount || 0),
+        prizePool: events.reduce((sum, event) => sum + extractPrizeAmount(event.displayPrize), 0)
+      }
+    });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to load event stats." });
+  }
+});
+
 router.get("/:eventId", async (req, res) => {
   try {
     const event = await Event.findOne({
       eventId: req.params.eventId,
-      $or: [
-        { status: "active" },
-        { status: { $exists: false } }
-      ]
+      ...getActiveEventQuery()
     }).lean();
     if (!event) return res.status(404).json({ error: "Event not found." });
     return res.json({
