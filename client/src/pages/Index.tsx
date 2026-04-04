@@ -368,7 +368,11 @@ const Index = () => {
         const upcoming = getUpcomingEventTime(rows);
         if (upcoming) {
           setLatestEventTimeText(upcoming);
-          localStorage.setItem(NEXT_EVENT_STORAGE_KEY, upcoming);
+          try {
+            localStorage.setItem(NEXT_EVENT_STORAGE_KEY, upcoming);
+          } catch (_error) {
+            // Ignore storage quota errors to avoid UI crashes.
+          }
         }
       })
       .catch(() => setEvents([]));

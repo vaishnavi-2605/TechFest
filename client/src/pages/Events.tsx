@@ -39,7 +39,11 @@ const EventsPage = () => {
       .then((data) => {
         const nextEvents = data.events || [];
         setEvents(nextEvents);
-        sessionStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify({ events: nextEvents }));
+        try {
+          sessionStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify({ events: nextEvents }));
+        } catch (_error) {
+          // Ignore storage quota errors.
+        }
       })
       .catch(() => {
         setEvents((current) => (current.length ? current : []));

@@ -3,7 +3,11 @@ export function saveAuth(authResponse: { token: string; user: unknown }) {
     token: authResponse.token,
     user: authResponse.user,
   };
-  localStorage.setItem("techfestAuth", JSON.stringify(payload));
+  try {
+    localStorage.setItem("techfestAuth", JSON.stringify(payload));
+  } catch (_error) {
+    // Ignore storage quota errors to avoid breaking login.
+  }
   return payload;
 }
 

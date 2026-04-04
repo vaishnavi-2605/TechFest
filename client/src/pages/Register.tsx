@@ -134,7 +134,11 @@ const RegisterPage = () => {
         const nextEvent = data.event || null;
         setEvent(nextEvent);
         if (nextEvent) {
-          sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+          try {
+            sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+          } catch (_error) {
+            // Ignore storage quota errors.
+          }
         }
       })
       .catch((error) => setStatusMessage(error instanceof Error ? error.message : "Failed to load event."))

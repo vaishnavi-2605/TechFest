@@ -119,12 +119,16 @@ const CoordinatorDashboardPage = () => {
       setEvents(nextEvents);
       setParticipants(nextParticipants);
       setSponsors(nextSponsors);
-      sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
-        profile: coordinator,
-        events: nextEvents,
-        participants: nextParticipants,
-        sponsors: nextSponsors
-      }));
+      try {
+        sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
+          profile: coordinator,
+          events: nextEvents,
+          participants: nextParticipants,
+          sponsors: nextSponsors
+        }));
+      } catch (_error) {
+        // Ignore storage quota errors.
+      }
 
       if (!coordinator?.isSignatureCoordinator) {
         const notifications = coordinator?.notifications || [];
@@ -585,7 +589,7 @@ const CoordinatorDashboardPage = () => {
                     <td className="py-3 px-4">
                       <button
                         type="button"
-                        onClick={() => handleRemoveParticipant((row as { id?: string }).id)}
+                        onClick={() => handleRemoveParticipant((row as { id?: string; _id?: string }).id || (row as { _id?: string })._id)}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
                       >
                         Remove

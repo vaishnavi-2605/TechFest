@@ -55,7 +55,11 @@ const EventDetailsPage = () => {
         const nextEvent = data.event || null;
         setEvent(nextEvent);
         if (nextEvent) {
-          sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+          try {
+            sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
+          } catch (_error) {
+            // Ignore storage quota errors.
+          }
         }
       })
       .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load event."))
@@ -64,6 +68,14 @@ const EventDetailsPage = () => {
 
   const formatted = useMemo(() => (event ? formatBackendEvent(event) : null), [event]);
   const formattedDescription = useMemo(() => formatDescriptionText(event?.description), [event?.description]);
+  const eventTypeLabel = useMemo(() => {
+    const raw = String(event?.eventType || event?.displayCategory || formatted?.category || "").trim();
+    if (!raw) return "N/A";
+    if (raw.toLowerCase().startsWith("workshop")) return "Workshop";
+    if (raw.toLowerCase().includes("non")) return "Non-Technical";
+    if (raw.toLowerCase().includes("tech")) return "Technical";
+    return raw;
+  }, [event?.eventType, event?.displayCategory, formatted?.category]);
   const rewardText = useMemo(() => String(event?.displayPrize || "").trim(), [event?.displayPrize]);
   const rewardLines = useMemo(
     () => rewardText.split("\n").map((line) => line.trim()).filter(Boolean),
@@ -132,6 +144,17 @@ const EventDetailsPage = () => {
               )}
             </div>
 
+            {event.shortDescription ? (
+              <motion.p
+                className="text-foreground/80 text-base font-medium"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: 0.42 }}
+              >
+                {event.shortDescription}
+              </motion.p>
+            ) : null}
+
             <motion.p
               className="text-muted-foreground whitespace-pre-line"
               initial={{ opacity: 0, y: 10 }}
@@ -175,6 +198,10 @@ const EventDetailsPage = () => {
                 <div className="rounded-xl border border-white/10 bg-card/30 p-4">
                   <p className="text-xs text-muted-foreground mb-1">Department</p>
                   <p className="text-foreground font-semibold">{event.department}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-card/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Event Type</p>
+                  <p className="text-foreground font-semibold">{eventTypeLabel}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-card/30 p-4">
                   <p className="text-xs text-muted-foreground mb-1">Team Size</p>

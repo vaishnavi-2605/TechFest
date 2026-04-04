@@ -70,10 +70,14 @@ const AdminDashboardPage = () => {
       const nextUnread = Number(unreadData.unreadCount || 0);
       setCoordinators(nextCoordinators);
       setUnread(nextUnread);
-      sessionStorage.setItem(ADMIN_DASHBOARD_CACHE_KEY, JSON.stringify({
-        coordinators: nextCoordinators,
-        unread: nextUnread
-      }));
+      try {
+        sessionStorage.setItem(ADMIN_DASHBOARD_CACHE_KEY, JSON.stringify({
+          coordinators: nextCoordinators,
+          unread: nextUnread
+        }));
+      } catch (_error) {
+        // Ignore storage quota errors.
+      }
     } catch (error) {
       if (handleAdminAccessError(error)) return;
       setAlert(error instanceof Error ? error.message : "Failed to load dashboard.");

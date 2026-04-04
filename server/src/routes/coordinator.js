@@ -166,6 +166,7 @@ router.get("/participants", async (req, res) => {
     const participants = eventIds.length
       ? await Registration.find({ eventId: { $in: eventIds } })
           .select({
+            _id: 1,
             registrationId: 1,
             fullName: 1,
             teamMembers: 1,
@@ -181,7 +182,12 @@ router.get("/participants", async (req, res) => {
           .lean()
       : [];
 
-    return res.json({ participants });
+    return res.json({
+      participants: participants.map((row) => ({
+        ...row,
+        id: String(row._id || "")
+      }))
+    });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to load participants." });
   }
@@ -343,14 +349,17 @@ router.post("/events", upload.fields([
     const finalFee = Number(fee || 0);
     const normalizedTeamSize = Math.max(1, Number(teamSize || 1));
     const derivedIsTeamEvent = normalizedTeamSize > 1;
+    const normalizedDisplayTeamSize =
+      String(displayTeamSize || "").trim() || (normalizedTeamSize > 1 ? `1-${normalizedTeamSize}` : "1");
 
     const event = new Event({
       eventId: normalizedEventId,
       department: coordinator.department || "General",
       eventType: normalizedEventType,
+      displayCategory: normalizedEventType,
       title: String(title).trim(),
       displayPrize: String(displayPrize || "").trim(),
-      displayTeamSize: String(displayTeamSize || "").trim(),
+      displayTeamSize: normalizedDisplayTeamSize,
       shortDescription: String(shortDescription).trim(),
       description: String(description).trim(),
       fee: finalFee,
@@ -461,7 +470,10 @@ router.put("/events/:id", upload.fields([
       if (normalizedEventType && !["Technical", "Non-Technical", "Workshop"].includes(normalizedEventType)) {
         return res.status(400).json({ error: "Event type must be Technical, Non-Technical, or Workshop." });
       }
-      if (normalizedEventType) event.eventType = normalizedEventType;
+      if (normalizedEventType) {
+        event.eventType = normalizedEventType;
+        event.displayCategory = normalizedEventType;
+      }
     }
     if (displayPrize !== undefined) event.displayPrize = String(displayPrize || "").trim();
     if (displayTeamSize !== undefined) event.displayTeamSize = String(displayTeamSize || "").trim();
