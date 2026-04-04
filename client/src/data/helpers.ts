@@ -181,6 +181,15 @@ export function getCategoryFromDepartment(department?: string): Event["category"
   return "Workshops";
 }
 
+function normalizeEventCategory(raw?: string): Event["category"] | "" {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return "";
+  if (value.startsWith("workshop")) return "Workshops";
+  if (value.includes("non")) return "Non-Technical";
+  if (value.includes("tech")) return "Technical";
+  return "";
+}
+
 export function formatBackendEvent(event: BackendEvent): Event {
   const maxTeam = Number(event.teamSize || 1);
   const deadlineDate = parseEventDate(event.time);
@@ -188,13 +197,18 @@ export function formatBackendEvent(event: BackendEvent): Event {
     ? new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate() - 1)
     : null;
 
+  const normalizedCategory =
+    normalizeEventCategory(event.displayCategory) ||
+    normalizeEventCategory(event.eventType) ||
+    getCategoryFromDepartment(event.department);
+
   return {
     id: event.eventId,
     eventId: event.eventId,
     name: event.title,
     description: event.shortDescription || event.description,
     shortDescription: event.shortDescription || "",
-    category: (event.displayCategory as Event["category"]) || getCategoryFromDepartment(event.department),
+    category: normalizedCategory,
     teamSize: event.displayTeamSize || (event.isTeamEvent && maxTeam > 1 ? `1-${maxTeam}` : "1"),
     prize: event.displayPrize || (event.fee > 0 ? `₹ ${event.fee}` : "Free"),
     displayPrize: event.displayPrize || "",
