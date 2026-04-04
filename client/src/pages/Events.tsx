@@ -8,7 +8,7 @@ import { formatBackendEvent, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent } from "@/types";
 
 const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
-const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
+const EVENTS_CACHE_KEY = "techfestPublicEventsCache:v2";
 
 function matchesEventFilter(category: string, filter: (typeof eventFilterOptions)[number]) {
   if (filter === "All") return true;

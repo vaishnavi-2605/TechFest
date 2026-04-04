@@ -26,6 +26,21 @@ function normalizeEventType(value) {
   return "";
 }
 
+function applyEventOverrides(event) {
+  const title = String(event?.title || "").toLowerCase();
+  if (title.includes("tech tank")) {
+    return {
+      ...event,
+      title: "Tech Tank: Equity Wars",
+      shortDescription: "It’s not just about pitching a startup — it’s about building, investing, and winning like real founders.",
+      description: "It’s not just about pitching a startup — it’s about building, investing, and winning like real founders.",
+      eventType: "Technical",
+      displayCategory: "Technical",
+    };
+  }
+  return event;
+}
+
 async function getSignatureCoordinatorId() {
   const signatureCoordinatorEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
     .trim()
@@ -100,15 +115,18 @@ router.get("/", async (req, res) => {
     const signatureCoordinatorId = await getSignatureCoordinatorId();
     const events = await Event.find(getActiveEventQuery()).sort({ department: 1, title: 1 }).lean();
     res.json({
-      events: events.map((event) => ({
-        ...event,
-        eventType: normalizeEventType(event.eventType) || normalizeEventType(event.displayCategory) || "Technical",
-        displayCategory: normalizeEventType(event.displayCategory) || normalizeEventType(event.eventType) || "",
-        isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
-        registrationClosed: Boolean(event.registrationClosed),
-        posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
-        paymentQrUrl: getResolvedImageUrl(event, "paymentQr", req, "events")
-      }))
+      events: events.map((rawEvent) => {
+        const event = applyEventOverrides(rawEvent);
+        return {
+          ...event,
+          eventType: normalizeEventType(event.eventType) || normalizeEventType(event.displayCategory) || "Technical",
+          displayCategory: normalizeEventType(event.displayCategory) || normalizeEventType(event.eventType) || "",
+          isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
+          registrationClosed: Boolean(event.registrationClosed),
+          posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
+          paymentQrUrl: getResolvedImageUrl(event, "paymentQr", req, "events")
+        };
+      })
     });
   } catch (_error) {
     res.status(500).json({ error: "Failed to load events." });
@@ -145,15 +163,16 @@ router.get("/:eventId", async (req, res) => {
       ...getActiveEventQuery()
     }).lean();
     if (!event) return res.status(404).json({ error: "Event not found." });
+    const nextEvent = applyEventOverrides(event);
     return res.json({
       event: {
-        ...event,
-        eventType: normalizeEventType(event.eventType) || normalizeEventType(event.displayCategory) || "Technical",
-        displayCategory: normalizeEventType(event.displayCategory) || normalizeEventType(event.eventType) || "",
-        isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
-        registrationClosed: Boolean(event.registrationClosed),
-        posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
-        paymentQrUrl: getResolvedImageUrl(event, "paymentQr", req, "events")
+        ...nextEvent,
+        eventType: normalizeEventType(nextEvent.eventType) || normalizeEventType(nextEvent.displayCategory) || "Technical",
+        displayCategory: normalizeEventType(nextEvent.displayCategory) || normalizeEventType(nextEvent.eventType) || "",
+        isSignatureEvent: isSignatureEventMatch(nextEvent, signatureCoordinatorId),
+        registrationClosed: Boolean(nextEvent.registrationClosed),
+        posterUrl: getResolvedImageUrl(nextEvent, "poster", req, "events"),
+        paymentQrUrl: getResolvedImageUrl(nextEvent, "paymentQr", req, "events")
       }
     });
   } catch (_error) {
