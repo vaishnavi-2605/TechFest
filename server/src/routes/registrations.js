@@ -161,7 +161,7 @@ router.post("/", async (req, res) => {
       : null;
 
     const effectiveTime = selectedSubEvent?.time || event.time;
-    if (isRegistrationClosed(effectiveTime)) {
+    if (event.registrationClosed || isRegistrationClosed(effectiveTime)) {
       return res.status(400).json({ error: "Registration is closed 12 hours before the event start time." });
     }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuth } from "@/data/auth";
 
@@ -46,11 +46,11 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
-          <Zap className="w-7 h-7 text-primary transition-all group-hover:drop-shadow-[0_0_8px_hsl(263,84%,58%)]" />
-          <span className="font-heading text-xl font-bold tracking-wider gradient-text">
-            TechFest
-          </span>
+        <Link to="/" className="flex items-center gap-4 group">
+          <div className="w-20 h-20 flex items-center justify-center">
+            <img src="/logos/logo2.png" alt="KBTCOE Techfest logo" className="max-w-full max-h-full object-contain block" />
+          </div>
+          <span className="sr-only">KBTCOE Techfest</span>
         </Link>
 
         {/* Desktop Nav */}

@@ -125,7 +125,8 @@ export function parseEventDateTime(timeText?: string) {
   );
 }
 
-export function isRegistrationClosed(timeText?: string, now = new Date()) {
+export function isRegistrationClosed(timeText?: string, now = new Date(), manualClosed = false) {
+  if (manualClosed) return true;
   const eventDateTime = parseEventDateTime(timeText);
   if (!eventDateTime || Number.isNaN(eventDateTime.getTime())) return false;
 
@@ -208,6 +209,8 @@ export function formatBackendEvent(event: BackendEvent): Event {
     guidePhone: event.guidePhone,
     venue: event.address,
     time: event.time,
+    isSignatureEvent: event.isSignatureEvent,
+    registrationClosed: event.registrationClosed
   };
 }
 

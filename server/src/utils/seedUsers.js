@@ -32,4 +32,38 @@ async function seedDefaultAdmin() {
   });
 }
 
-module.exports = { seedDefaultAdmin };
+async function seedSignatureCoordinator() {
+  const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "").trim().toLowerCase();
+  const signaturePassword = String(process.env.SIGNATURE_EVENT_COORDINATOR_PASSWORD || "");
+  const signatureName = String(process.env.SIGNATURE_EVENT_COORDINATOR_NAME || "Signature Coordinator");
+  const signatureDepartment = String(process.env.SIGNATURE_EVENT_COORDINATOR_DEPARTMENT || "General");
+
+  if (!signatureEmail || !signaturePassword) return;
+
+  const passwordHash = await bcrypt.hash(signaturePassword, 10);
+  const username = signatureEmail.split("@")[0] || "signature-coordinator";
+
+  const existingByEmail = await User.findOne({ email: signatureEmail });
+  if (existingByEmail) {
+    existingByEmail.passwordHash = passwordHash;
+    existingByEmail.role = "coordinator";
+    existingByEmail.name = signatureName;
+    existingByEmail.department = signatureDepartment;
+    existingByEmail.username = existingByEmail.username || username;
+    existingByEmail.isActive = true;
+    await existingByEmail.save();
+    return;
+  }
+
+  await User.create({
+    name: signatureName,
+    username,
+    email: signatureEmail,
+    passwordHash,
+    role: "coordinator",
+    department: signatureDepartment,
+    isActive: true
+  });
+}
+
+module.exports = { seedDefaultAdmin, seedSignatureCoordinator };

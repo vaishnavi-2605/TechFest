@@ -60,6 +60,7 @@ const RegisterPage = () => {
     studentCollege: "",
     studentDepartment: "",
     studentYear: "",
+    projectCategory: "",
     teamMembers: "",
     paymentRef: "",
     confirmCheck: false,
@@ -68,6 +69,8 @@ const RegisterPage = () => {
   const [memberNames, setMemberNames] = useState<string[]>([""]);
   const [memberCountTouched, setMemberCountTouched] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewPaymentQr, setPreviewPaymentQr] = useState<string | null>(null);
+  const [previewPoster, setPreviewPoster] = useState<string | null>(null);
 
   const errorFieldOrder = [
     "fullName",
@@ -140,7 +143,7 @@ const RegisterPage = () => {
 
   useEffect(() => {
     if (!event) return;
-    const closed = isRegistrationClosed(event.time);
+    const closed = isRegistrationClosed(event.time, new Date(), Boolean(event.registrationClosed));
     setRegistrationClosed(closed);
     if (closed) {
       setShowClosedPopup(true);
@@ -179,6 +182,11 @@ const RegisterPage = () => {
     });
   }, [event]);
 
+  function isSignatureProjectCompetition() {
+    const title = String(event?.title || "").toLowerCase();
+    return title.includes("project competition");
+  }
+
   function validateDetails() {
     const nextErrors: Record<string, string> = {};
     if (!form.fullName.trim()) nextErrors.fullName = isTeamEvent ? "Enter team name" : "Enter full name";
@@ -188,6 +196,7 @@ const RegisterPage = () => {
     if (!form.studentCollege.trim()) nextErrors.studentCollege = "Required";
     if (!form.studentDepartment.trim()) nextErrors.studentDepartment = "Required";
     if (!form.studentYear) nextErrors.studentYear = "Required";
+    if (isSignatureProjectCompetition() && !form.projectCategory) nextErrors.projectCategory = "Required";
     if (isTeamEvent) {
       const maxAllowed = Math.max(1, Number(event?.teamSize || 1));
       const count = Math.max(1, Math.min(Number(memberCount || 1), maxAllowed));
@@ -257,6 +266,7 @@ const RegisterPage = () => {
         studentDepartment: form.studentDepartment.trim(),
         studentCollege: form.studentCollege.trim(),
         studentYear: form.studentYear,
+        projectCategory: isSignatureProjectCompetition() ? form.projectCategory : "",
         phone: form.phone.replace(/\D/g, "").slice(0, 10),
         email: form.email.trim(),
         paymentRef: isPaidEvent ? form.paymentRef.trim() : "Not Required",
@@ -324,7 +334,14 @@ const RegisterPage = () => {
               <div>
                 <div className="w-full h-52 md:h-60 rounded-xl border border-white/10 overflow-hidden bg-card/40 p-2">
                   {resolveApiAssetUrl(event.posterUrl) ? (
-                    <img src={resolveApiAssetUrl(event.posterUrl)} alt={event.title} className="w-full h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPoster(resolveApiAssetUrl(event.posterUrl) || null)}
+                      className="w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      aria-label="View poster"
+                    >
+                      <img src={resolveApiAssetUrl(event.posterUrl)} alt={event.title} className="w-full h-full object-contain" />
+                    </button>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
                       <ImageIcon className="w-6 h-6" />
@@ -472,6 +489,25 @@ const RegisterPage = () => {
                   </select>
                   {errors.studentYear && <p className="text-xs text-destructive mt-1">{errors.studentYear}</p>}
                 </div>
+                {isSignatureProjectCompetition() ? (
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">Project Category</label>
+                    <select
+                      id="reg-project-category"
+                      className={inputClass}
+                      value={form.projectCategory}
+                      onChange={(e) => {
+                        setForm({ ...form, projectCategory: e.target.value });
+                        clearError("projectCategory");
+                      }}
+                    >
+                      <option value="">Select project category</option>
+                      <option value="Hardware">Hardware</option>
+                      <option value="Software">Software</option>
+                    </select>
+                    {errors.projectCategory && <p className="text-xs text-destructive mt-1">{errors.projectCategory}</p>}
+                  </div>
+                ) : null}
                 {isTeamEvent ? (
                   <>
                     <div>
@@ -551,7 +587,18 @@ const RegisterPage = () => {
                     <>
                       <p className="text-sm text-muted-foreground mb-3">Pay <strong>₹ {event.fee}</strong> for this event and enter the payment reference/UTR below.</p>
                       {resolveApiAssetUrl(event.paymentQrUrl) ? (
-                        <img src={resolveApiAssetUrl(event.paymentQrUrl)} alt="Payment QR" className="w-44 h-44 object-contain rounded-xl border border-white/10 bg-white p-2 mb-4" />
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPaymentQr(resolveApiAssetUrl(event.paymentQrUrl) || null)}
+                          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-xl mb-4"
+                          aria-label="View payment QR"
+                        >
+                          <img
+                            src={resolveApiAssetUrl(event.paymentQrUrl)}
+                            alt="Payment QR"
+                            className="w-44 h-44 object-contain rounded-xl border border-white/10 bg-white p-2"
+                          />
+                        </button>
                       ) : (
                         <div className="w-44 h-44 rounded-xl border border-dashed border-white/15 bg-card/30 grid place-items-center text-muted-foreground mb-4">
                           Payment QR not uploaded
@@ -698,10 +745,45 @@ const RegisterPage = () => {
             <div />
           )}
         </div>
+        {previewPaymentQr ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPaymentQr(null)}>
+            <div
+              className="relative w-full max-w-md rounded-2xl border border-white/10 bg-card/95 p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewPaymentQr(null)}
+                className="absolute right-3 top-3 rounded-full bg-muted/70 px-3 py-1 text-xs text-foreground hover:bg-muted"
+              >
+                Close
+              </button>
+              <img src={previewPaymentQr} alt="Payment QR" className="w-full max-h-[80vh] object-contain rounded-xl" />
+            </div>
+          </div>
+        ) : null}
+        {previewPoster ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPoster(null)}>
+            <div
+              className="relative w-full max-w-[820px] rounded-2xl border border-white/10 bg-card/95 p-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewPoster(null)}
+                className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs text-white hover:bg-black/80"
+              >
+                Close
+              </button>
+              <div className="w-full max-h-[85vh] flex items-center justify-center">
+                <img src={previewPoster} alt="Event poster" className="max-h-[85vh] w-auto object-contain rounded-xl" />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 };
 
 export default RegisterPage;
-

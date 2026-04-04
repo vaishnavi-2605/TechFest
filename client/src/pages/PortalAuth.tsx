@@ -7,6 +7,8 @@ import { saveAuth } from "@/data/auth";
 import { resolveApiAssetUrl } from "@/data/helpers";
 
 const COORDINATOR_DASHBOARD_CACHE_KEY = "techfestCoordinatorDashboardCache";
+const ADMIN_DASHBOARD_CACHE_KEY = "techfestAdminDashboardCache";
+const ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX = "techfestAdminCoordinatorPreview:";
 
 function warmImage(url?: string) {
   const src = resolveApiAssetUrl(url);
@@ -46,6 +48,7 @@ const departmentOptions = [
   "Computer Engineering",
   "Information Technology",
   "Electronics and Telecommunication",
+  "Instrumentation and Control Engineering",
   "Mechanical Engineering",
   "Civil Engineering",
   "Artificial Intelligence and Data Science",
@@ -137,6 +140,12 @@ const PortalAuthPage = () => {
       const auth = saveAuth(response);
       const role = String((auth.user as { role?: string })?.role || "");
       primeCoordinatorDashboardCache((auth.user || {}) as Record<string, unknown>);
+      if (!["admin", "super_admin"].includes(role)) {
+        sessionStorage.removeItem(ADMIN_DASHBOARD_CACHE_KEY);
+        Object.keys(sessionStorage)
+          .filter((key) => key.startsWith(ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX))
+          .forEach((key) => sessionStorage.removeItem(key));
+      }
       if (role === "admin" || role === "super_admin") navigate("/admin/dashboard");
       else navigate("/coordinator/dashboard");
     } catch (error) {
