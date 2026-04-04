@@ -198,8 +198,8 @@ export function formatBackendEvent(event: BackendEvent): Event {
     : null;
 
   const normalizedCategory =
-    normalizeEventCategory(event.displayCategory) ||
     normalizeEventCategory(event.eventType) ||
+    normalizeEventCategory(event.displayCategory) ||
     getCategoryFromDepartment(event.department);
 
   return {

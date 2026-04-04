@@ -131,7 +131,8 @@ function buildPrefix(sourceText) {
 async function generateRegistrationId(event) {
   const prefix = buildPrefix(event?.title || event?.eventId || "EV");
   const eventId = String(event.eventId || "").trim();
-  const eventCode = eventId ? eventId.split("-")[0].toUpperCase().slice(0, 4) : "EV";
+  const compactEventId = eventId.replace(/[^a-z0-9]/gi, "").toUpperCase();
+  const eventCode = compactEventId ? compactEventId.slice(-4) : "EVNT";
   const baseCount = await Registration.countDocuments({ eventId });
   const serial = 1000 + Number(baseCount || 0);
   return `${prefix}-${eventCode}-${String(serial).padStart(4, "0")}`;
@@ -192,7 +193,9 @@ router.post("/", async (req, res) => {
         if (error?.code === 11000 && error?.keyPattern?.registrationId) {
           attempts += 1;
           const nextSerial = 1000 + (await Registration.countDocuments({ eventId: String(req.body.eventId || "").trim() }));
-          const eventCode = String(event?.eventId || "").trim().split("-")[0]?.toUpperCase().slice(0, 4) || "EV";
+          const eventIdValue = String(event?.eventId || "").trim();
+          const compactEventId = eventIdValue.replace(/[^a-z0-9]/gi, "").toUpperCase();
+          const eventCode = compactEventId ? compactEventId.slice(-4) : "EVNT";
           registrationId = `${buildPrefix(event?.title || event?.eventId || "EV")}-${eventCode}-${String(nextSerial).padStart(4, "0")}`;
         } else {
           throw error;
