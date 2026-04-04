@@ -19,6 +19,8 @@ export interface Event {
   venue?: string;
   time?: string;
   day?: 1 | 2;
+  isSignatureEvent?: boolean;
+  registrationClosed?: boolean;
 }
 
 export interface BackendSubEvent {
@@ -60,6 +62,8 @@ export interface BackendEvent {
   rules?: string[];
   subEvents?: BackendSubEvent[];
   status?: string;
+  isSignatureEvent?: boolean;
+  registrationClosed?: boolean;
 }
 
 export interface TeamMember {

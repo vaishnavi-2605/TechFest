@@ -5,7 +5,7 @@ const cors = require("cors");
 const path = require("path");
 
 const { connectDatabase } = require("./utils/db");
-const { seedDefaultAdmin } = require("./utils/seedUsers");
+const { seedDefaultAdmin, seedSignatureCoordinator } = require("./utils/seedUsers");
 const { uploadDir } = require("./utils/upload");
 const imageRouter = require("./routes/images");
 const eventsRouter = require("./routes/events");
@@ -18,6 +18,7 @@ const sponsorsRouter = require("./routes/sponsors");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
+let server;
 
 app.set("trust proxy", 1);
 
@@ -58,8 +59,18 @@ app.use((_req, res) => {
 async function start() {
   await connectDatabase();
   await seedDefaultAdmin();
-  app.listen(PORT, () => {
+  await seedSignatureCoordinator();
+  server = app.listen(PORT, () => {
     console.log(`TechFest backend running on http://localhost:${PORT}`);
+  });
+  server.on("error", (err) => {
+    if (err && err.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use. Please free the port or change PORT in server/.env.local.`);
+      process.exit(1);
+      return;
+    }
+    console.error("Server error:", err?.message || err);
+    process.exit(1);
   });
 }
 
@@ -67,3 +78,19 @@ start().catch((error) => {
   console.error("Failed to start server:", error.message);
   process.exit(1);
 });
+
+function shutdown(signal) {
+  if (!server) {
+    process.exit(0);
+    return;
+  }
+  server.close(() => {
+    console.log(`Server closed (${signal}).`);
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 2000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGUSR2", () => shutdown("SIGUSR2"));

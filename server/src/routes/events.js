@@ -16,6 +16,32 @@ function getActiveEventQuery() {
   };
 }
 
+async function getSignatureCoordinatorId() {
+  const signatureCoordinatorEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  if (!signatureCoordinatorEmail) return null;
+
+  const user = await User.findOne({ email: signatureCoordinatorEmail }).select({ _id: 1 }).lean();
+  return user?._id ? String(user._id) : null;
+}
+
+function isSignatureEventMatch(event, signatureCoordinatorId) {
+  const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim().toLowerCase();
+  if (!signatureTitle) return false;
+
+  const titleMatch = String(event.title || "").toLowerCase().includes(signatureTitle);
+  if (!titleMatch) return false;
+
+  const signatureCoordinatorEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  if (!signatureCoordinatorEmail) return true;
+
+  if (!signatureCoordinatorId) return false;
+  return String(event.coordinatorId || "") === signatureCoordinatorId;
+}
+
 function extractPrizeAmount(displayPrize) {
   const matches = String(displayPrize || "").match(/[\d,]+/g) || [];
   return matches.reduce((sum, value) => sum + Number(String(value).replace(/,/g, "")), 0);
@@ -61,10 +87,13 @@ router.get("/coordinators/public", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
+    const signatureCoordinatorId = await getSignatureCoordinatorId();
     const events = await Event.find(getActiveEventQuery()).sort({ department: 1, title: 1 }).lean();
     res.json({
       events: events.map((event) => ({
         ...event,
+        isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
+        registrationClosed: Boolean(event.registrationClosed),
         posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
         paymentQrUrl: getResolvedImageUrl(event, "paymentQr", req, "events")
       }))
@@ -98,6 +127,7 @@ router.get("/stats", async (_req, res) => {
 
 router.get("/:eventId", async (req, res) => {
   try {
+    const signatureCoordinatorId = await getSignatureCoordinatorId();
     const event = await Event.findOne({
       eventId: req.params.eventId,
       ...getActiveEventQuery()
@@ -106,6 +136,8 @@ router.get("/:eventId", async (req, res) => {
     return res.json({
       event: {
         ...event,
+        isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
+        registrationClosed: Boolean(event.registrationClosed),
         posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
         paymentQrUrl: getResolvedImageUrl(event, "paymentQr", req, "events")
       }

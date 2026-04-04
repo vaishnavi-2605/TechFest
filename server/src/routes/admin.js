@@ -10,7 +10,43 @@ const { getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
 
+function isSignatureCoordinatorEmail(email) {
+  const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  if (!signatureEmail) return false;
+  return String(email || "").trim().toLowerCase() === signatureEmail;
+}
+
+async function getSignatureEventId() {
+  const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim();
+  if (!signatureTitle) return null;
+
+  let coordinatorId = null;
+  if (signatureEmail) {
+    const coordinator = await User.findOne({ email: signatureEmail }).select({ _id: 1 }).lean();
+    coordinatorId = coordinator?._id ? String(coordinator._id) : null;
+  }
+
+  const query = {
+    title: { $regex: signatureTitle, $options: "i" },
+  };
+  if (coordinatorId) query.coordinatorId = coordinatorId;
+
+  const event = await Event.findOne(query).select({ eventId: 1 }).lean();
+  return event?.eventId ? String(event.eventId) : null;
+}
+
 router.use(requireAuth, requireRole("super_admin", "admin"));
+router.use((req, res, next) => {
+  if (isSignatureCoordinatorEmail(req.user?.email)) {
+    return res.status(403).json({ error: "Signature coordinator cannot access admin routes." });
+  }
+  return next();
+});
 
 router.get("/coordinators", async (req, res) => {
   try {
@@ -256,6 +292,45 @@ router.delete("/coordinators/:id", async (req, res) => {
     return res.json({ message: "Coordinator deactivated." });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to delete coordinator." });
+  }
+});
+
+router.get("/registrations", async (req, res) => {
+  try {
+    const signatureEventId = await getSignatureEventId();
+    const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim();
+    const signatureTitleRegex = signatureTitle ? new RegExp(signatureTitle, "i") : null;
+    const excludeQuery = [];
+    if (signatureEventId) excludeQuery.push({ eventId: { $ne: signatureEventId } });
+    if (signatureTitleRegex) excludeQuery.push({ eventName: { $not: signatureTitleRegex } });
+    const registrations = await Registration.find(
+      excludeQuery.length ? { $and: excludeQuery } : {}
+    )
+      .populate('event', 'title eventId department')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      registrations: registrations.map((reg) => ({
+        id: reg._id,
+        registrationId: reg.registrationId,
+        fullName: reg.fullName,
+        email: reg.email,
+        phone: reg.phone,
+        studentCollege: reg.studentCollege,
+        studentDepartment: reg.studentDepartment,
+        studentYear: reg.studentYear,
+        projectCategory: reg.projectCategory,
+        teamMembers: reg.teamMembers,
+        eventName: reg.event?.title || reg.eventName,
+        eventId: reg.event?.eventId || reg.eventId,
+        department: reg.event?.department || reg.department,
+        paymentRef: reg.paymentRef,
+        createdAt: reg.createdAt
+      }))
+    });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to load registrations." });
   }
 });
 

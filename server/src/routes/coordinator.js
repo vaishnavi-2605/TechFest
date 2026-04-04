@@ -13,12 +13,34 @@ const router = express.Router();
 
 router.use(requireAuth, requireRole("coordinator"));
 
+function isSignatureCoordinator(req) {
+  const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  if (!signatureEmail) return false;
+  const requesterEmail = String(req.user?.email || "").trim().toLowerCase();
+  return requesterEmail === signatureEmail;
+}
+
+async function getSignatureEventForCoordinator(userId) {
+  const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim();
+  if (!signatureTitle) return null;
+  return Event.findOne({
+    coordinatorId: userId,
+    title: { $regex: signatureTitle, $options: "i" }
+  }).lean();
+}
+
 router.get("/me", async (req, res) => {
   try {
     const coordinator = await User.findById(req.user.id).lean();
     if (!coordinator || !coordinator.isActive) return res.status(404).json({ error: "Coordinator not found." });
 
-    const events = await Event.find({ coordinatorId: coordinator._id }).sort({ createdAt: -1 }).lean();
+    let events = await Event.find({ coordinatorId: coordinator._id }).sort({ createdAt: -1 }).lean();
+    if (isSignatureCoordinator(req)) {
+      const signatureEvent = await getSignatureEventForCoordinator(coordinator._id);
+      events = signatureEvent ? [signatureEvent] : [];
+    }
     return res.json({
       coordinator: {
         id: coordinator._id,
@@ -30,13 +52,16 @@ router.get("/me", async (req, res) => {
         department: coordinator.department || "",
         photoUrl: getResolvedImageUrl(coordinator, "photo", req, "users"),
         paymentQrUrl: getResolvedImageUrl(coordinator, "paymentQr", req, "users"),
-        notifications: Array.isArray(coordinator.notifications)
-          ? coordinator.notifications.map((item) => ({
-              message: item.message,
-              isRead: Boolean(item.isRead),
-              createdAt: item.createdAt
-            }))
-          : []
+        isSignatureCoordinator: isSignatureCoordinator(req),
+        notifications: isSignatureCoordinator(req)
+          ? []
+          : Array.isArray(coordinator.notifications)
+            ? coordinator.notifications.map((item) => ({
+                message: item.message,
+                isRead: Boolean(item.isRead),
+                createdAt: item.createdAt
+              }))
+            : []
       },
       events
     });
@@ -130,8 +155,14 @@ router.put("/me", upload.fields([{ name: "photo", maxCount: 1 }, { name: "paymen
 
 router.get("/participants", async (req, res) => {
   try {
-    const events = await Event.find({ coordinatorId: req.user.id }).select({ eventId: 1 }).lean();
-    const eventIds = events.map((e) => e.eventId);
+    let eventIds = [];
+    if (isSignatureCoordinator(req)) {
+      const signatureEvent = await getSignatureEventForCoordinator(req.user.id);
+      if (signatureEvent?.eventId) eventIds = [signatureEvent.eventId];
+    } else {
+      const events = await Event.find({ coordinatorId: req.user.id }).select({ eventId: 1 }).lean();
+      eventIds = events.map((e) => e.eventId);
+    }
     const participants = eventIds.length
       ? await Registration.find({ eventId: { $in: eventIds } })
           .select({
@@ -158,6 +189,9 @@ router.get("/participants", async (req, res) => {
 
 router.get("/sponsors", async (req, res) => {
   try {
+    if (isSignatureCoordinator(req)) {
+      return res.json({ sponsors: [] });
+    }
     const sponsors = await Sponsor.find({ coordinatorId: req.user.id }).sort({ createdAt: 1 }).lean();
     return res.json({
       sponsors: sponsors.map((sponsor) => ({
@@ -175,6 +209,9 @@ router.get("/sponsors", async (req, res) => {
 
 router.post("/sponsors", async (req, res) => {
   try {
+    if (isSignatureCoordinator(req)) {
+      return res.status(403).json({ error: "Not allowed for signature coordinator." });
+    }
     const { name, tier, url } = req.body || {};
     const normalizedName = String(name || "").trim();
     const normalizedTier = String(tier || "Silver").trim();
@@ -211,6 +248,9 @@ router.post("/sponsors", async (req, res) => {
 
 router.delete("/sponsors/:id", async (req, res) => {
   try {
+    if (isSignatureCoordinator(req)) {
+      return res.status(403).json({ error: "Not allowed for signature coordinator." });
+    }
     const sponsor = await Sponsor.findOneAndDelete({ _id: req.params.id, coordinatorId: req.user.id }).lean();
     if (!sponsor) return res.status(404).json({ error: "Sponsor not found." });
     return res.json({ message: "Sponsor deleted." });
@@ -231,6 +271,7 @@ router.post("/events", upload.fields([
       eventId,
       eventType,
       displayPrize,
+      displayTeamSize,
       title,
       shortDescription,
       description,
@@ -248,6 +289,12 @@ router.post("/events", upload.fields([
 
     if (!title || !shortDescription || !description) {
       return res.status(400).json({ error: "Title, one-line description and detailed description are required." });
+    }
+    if (isSignatureCoordinator(req)) {
+      const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim().toLowerCase();
+      if (!signatureTitle || !String(title).trim().toLowerCase().includes(signatureTitle)) {
+        return res.status(403).json({ error: "Signature coordinator can only create the signature event." });
+      }
     }
     const normalizedWhatsappGroupLink = String(whatsappGroupLink || "").trim();
     if (!normalizedWhatsappGroupLink) {
@@ -303,6 +350,7 @@ router.post("/events", upload.fields([
       eventType: normalizedEventType,
       title: String(title).trim(),
       displayPrize: String(displayPrize || "").trim(),
+      displayTeamSize: String(displayTeamSize || "").trim(),
       shortDescription: String(shortDescription).trim(),
       description: String(description).trim(),
       fee: finalFee,
@@ -314,6 +362,7 @@ router.post("/events", upload.fields([
       address: String(address || "").trim() || "To be announced",
       guide: coordinator.name,
       guidePhone: coordinator.phone || "N/A",
+      registrationClosed: false,
       posterUrl: "",
       rules: parsedRules,
       subEvents: parsedSubEvents
@@ -363,6 +412,12 @@ router.get("/events/:id", async (req, res) => {
   try {
     const event = await Event.findOne({ _id: req.params.id, coordinatorId: req.user.id }).lean();
     if (!event) return res.status(404).json({ error: "Event not found." });
+    if (isSignatureCoordinator(req)) {
+      const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim().toLowerCase();
+      if (!String(event.title || "").toLowerCase().includes(signatureTitle)) {
+        return res.status(403).json({ error: "Not allowed for signature coordinator." });
+      }
+    }
     return res.json({ event });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to load event." });
@@ -376,11 +431,18 @@ router.put("/events/:id", upload.fields([
   try {
     const event = await Event.findOne({ _id: req.params.id, coordinatorId: req.user.id });
     if (!event) return res.status(404).json({ error: "Event not found." });
+    if (isSignatureCoordinator(req)) {
+      const signatureTitle = String(process.env.SIGNATURE_EVENT_TITLE || "Project Competition").trim().toLowerCase();
+      if (!signatureTitle || !String(event.title || "").toLowerCase().includes(signatureTitle)) {
+        return res.status(403).json({ error: "Signature coordinator can only update the signature event." });
+      }
+    }
 
     const {
       title,
       eventType,
       displayPrize,
+      displayTeamSize,
       shortDescription,
       description,
       fee,
@@ -402,6 +464,7 @@ router.put("/events/:id", upload.fields([
       if (normalizedEventType) event.eventType = normalizedEventType;
     }
     if (displayPrize !== undefined) event.displayPrize = String(displayPrize || "").trim();
+    if (displayTeamSize !== undefined) event.displayTeamSize = String(displayTeamSize || "").trim();
     if (shortDescription !== undefined) event.shortDescription = String(shortDescription).trim();
     if (description !== undefined) event.description = String(description).trim();
     if (fee !== undefined) event.fee = Number(fee || 0);
@@ -432,6 +495,9 @@ router.put("/events/:id", upload.fields([
       }
       event.rules = parsedRules;
     }
+    if (req.body?.registrationClosed !== undefined) {
+      event.registrationClosed = String(req.body.registrationClosed) === "true";
+    }
 
     if (req.files?.poster?.[0]) setStoredImage(event, "poster", req.files.poster[0], req, "events");
     else setImageFromBodyValue(event, "poster", posterUrl);
@@ -456,11 +522,87 @@ router.put("/events/:id", upload.fields([
 
 router.delete("/events/:id", async (req, res) => {
   try {
+    if (isSignatureCoordinator(req)) {
+      return res.status(403).json({ error: "Not allowed for signature coordinator." });
+    }
     const event = await Event.findOneAndDelete({ _id: req.params.id, coordinatorId: req.user.id });
     if (!event) return res.status(404).json({ error: "Event not found." });
     return res.json({ message: "Event deleted." });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to delete event." });
+  }
+});
+
+router.patch("/events/:id/registration", async (req, res) => {
+  try {
+    if (isSignatureCoordinator(req)) {
+      return res.status(403).json({ error: "Not allowed for signature coordinator." });
+    }
+    const event = await Event.findOne({ _id: req.params.id, coordinatorId: req.user.id });
+    if (!event) return res.status(404).json({ error: "Event not found." });
+    event.registrationClosed = Boolean(req.body?.closed);
+    await event.save();
+    return res.json({ message: "Registration status updated.", event });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to update registration status." });
+  }
+});
+
+router.delete("/participants/demo", async (req, res) => {
+  try {
+    const pattern = /(demo|fake|test)/i;
+    let eventIds = [];
+    if (isSignatureCoordinator(req)) {
+      const signatureEvent = await getSignatureEventForCoordinator(req.user.id);
+      if (signatureEvent?.eventId) eventIds = [signatureEvent.eventId];
+    } else {
+      const events = await Event.find({ coordinatorId: req.user.id }).select({ eventId: 1 }).lean();
+      eventIds = events.map((e) => e.eventId);
+    }
+
+    const filter = eventIds.length ? { eventId: { $in: eventIds } } : null;
+    if (!filter) return res.json({ deleted: 0 });
+
+    const result = await Registration.deleteMany({
+      ...filter,
+      $or: [
+        { fullName: { $regex: pattern } },
+        { email: { $regex: pattern } },
+        { teamMembers: { $regex: pattern } },
+        { studentCollege: { $regex: pattern } },
+        { studentDepartment: { $regex: pattern } },
+        { eventName: { $regex: pattern } }
+      ]
+    });
+
+    return res.json({ deleted: result.deletedCount || 0 });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to remove demo participants." });
+  }
+});
+
+router.delete("/participants/:id", async (req, res) => {
+  try {
+    const participant = await Registration.findById(req.params.id).lean();
+    if (!participant) return res.status(404).json({ error: "Participant not found." });
+
+    let allowedEventIds = [];
+    if (isSignatureCoordinator(req)) {
+      const signatureEvent = await getSignatureEventForCoordinator(req.user.id);
+      if (signatureEvent?.eventId) allowedEventIds = [signatureEvent.eventId];
+    } else {
+      const events = await Event.find({ coordinatorId: req.user.id }).select({ eventId: 1 }).lean();
+      allowedEventIds = events.map((e) => e.eventId);
+    }
+
+    if (!allowedEventIds.includes(String(participant.eventId || ""))) {
+      return res.status(403).json({ error: "Not allowed to remove this participant." });
+    }
+
+    await Registration.deleteOne({ _id: participant._id });
+    return res.json({ message: "Participant removed." });
+  } catch (_error) {
+    return res.status(500).json({ error: "Failed to remove participant." });
   }
 });
 

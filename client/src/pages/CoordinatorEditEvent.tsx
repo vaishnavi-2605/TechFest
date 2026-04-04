@@ -19,7 +19,8 @@ const CoordinatorEditEventPage = () => {
     description: "",
     reward: "",
     fee: "0",
-    teamSize: "1",
+    teamSizeMin: "1",
+    teamSizeMax: "1",
     eventDate: "",
     time: "",
     address: "",
@@ -55,6 +56,10 @@ const CoordinatorEditEventPage = () => {
         const event = data.event || {};
         const timeText = String(event.time || "");
         const [datePart, timePart] = timeText.split("|").map((s) => s.trim());
+        const displayTeamSize = String(event.displayTeamSize || "");
+        const rangeMatch = displayTeamSize.match(/^(\d+)\s*-\s*(\d+)$/);
+        const minSize = rangeMatch ? rangeMatch[1] : String(event.teamSize ?? "1");
+        const maxSize = rangeMatch ? rangeMatch[2] : String(event.teamSize ?? "1");
         setForm({
           title: String(event.title || ""),
           eventType: String(event.eventType || "Technical"),
@@ -62,7 +67,8 @@ const CoordinatorEditEventPage = () => {
           description: String(event.description || ""),
           reward: String(event.displayPrize || ""),
           fee: String(event.fee ?? "0"),
-          teamSize: String(event.teamSize ?? "1"),
+          teamSizeMin: minSize,
+          teamSizeMax: maxSize,
           eventDate: datePart || "",
           time: timePart || "",
           address: String(event.address || ""),
@@ -83,6 +89,13 @@ const CoordinatorEditEventPage = () => {
       if (!form.eventType.trim()) nextErrors.eventType = "Event type is required.";
       if (!form.shortDescription.trim()) nextErrors.shortDescription = "Short description is required.";
       if (!form.description.trim()) nextErrors.description = "Detailed description is required.";
+      const minSize = Math.max(1, Number(form.teamSizeMin || 1));
+      const maxSize = Math.max(1, Number(form.teamSizeMax || form.teamSizeMin || 1));
+      if (!Number.isFinite(minSize) || !Number.isFinite(maxSize)) {
+        nextErrors.teamSize = "Enter valid team size range.";
+      } else if (maxSize < minSize) {
+        nextErrors.teamSize = "Max team size cannot be smaller than min.";
+      }
       if (!form.eventDate.trim()) nextErrors.eventDate = "Event date is required.";
       if (!form.address.trim()) nextErrors.address = "Venue/address is required.";
       if (!form.whatsappGroupLink.trim()) nextErrors.whatsappGroupLink = "WhatsApp group link is required.";
@@ -101,7 +114,9 @@ const CoordinatorEditEventPage = () => {
       fd.append("description", form.description);
       fd.append("displayPrize", form.reward);
       fd.append("fee", form.fee);
-      fd.append("teamSize", form.teamSize);
+      fd.append("teamSize", String(maxSize));
+      const displayTeamSize = minSize === maxSize ? String(maxSize) : `${minSize}-${maxSize}`;
+      fd.append("displayTeamSize", displayTeamSize);
       fd.append("time", form.time ? `${form.eventDate} | ${form.time}` : form.eventDate);
       fd.append("address", form.address);
       fd.append("whatsappGroupLink", form.whatsappGroupLink.trim());
@@ -195,14 +210,26 @@ const CoordinatorEditEventPage = () => {
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Team Size</label>
-                <input
-                  className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
-                  type="number"
-                  placeholder="Team Size"
-                  value={form.teamSize}
-                  onChange={(e) => updateField("teamSize", e.target.value)}
-                />
+                <label className="text-sm text-muted-foreground mb-1 block">Team Size Range</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
+                    type="number"
+                    min={1}
+                    placeholder="Min"
+                    value={form.teamSizeMin}
+                    onChange={(e) => updateField("teamSizeMin", e.target.value)}
+                  />
+                  <input
+                    className="w-full px-4 py-3 rounded-lg bg-muted/50 border border-border"
+                    type="number"
+                    min={1}
+                    placeholder="Max"
+                    value={form.teamSizeMax}
+                    onChange={(e) => updateField("teamSizeMax", e.target.value)}
+                  />
+                </div>
+                {errors.teamSize && <p className="text-xs text-destructive mt-1">{errors.teamSize}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

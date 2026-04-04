@@ -38,8 +38,8 @@ const EventDetailsPage = () => {
   const { eventId = "" } = useParams();
   const [event, setEvent] = useState<BackendEvent | null>(() => readCachedEvent(eventId));
   const [alert, setAlert] = useState("");
-  const [previewPoster, setPreviewPoster] = useState<string | null>(null);
   const [loading, setLoading] = useState(!readCachedEvent(eventId));
+  const [previewPoster, setPreviewPoster] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = readCachedEvent(eventId);
@@ -222,6 +222,7 @@ const EventDetailsPage = () => {
                 <RegisterAction
                   eventId={event.eventId}
                   timeText={event.time}
+                  registrationClosed={Boolean(event.registrationClosed)}
                   className="px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-center"
                 />
                 <Link to="/events" className="px-6 py-3 rounded-lg border border-white/15 text-muted-foreground text-center">
@@ -235,17 +236,19 @@ const EventDetailsPage = () => {
         {previewPoster ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPoster(null)}>
             <div
-              className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-card/95 p-3"
+              className="relative w-full max-w-[820px] rounded-2xl border border-white/10 bg-card/95 p-3"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setPreviewPoster(null)}
-                className="absolute right-3 top-3 rounded-full bg-muted/70 px-3 py-1 text-xs text-foreground hover:bg-muted"
+                className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs text-white hover:bg-black/80"
               >
                 Close
               </button>
-              <img src={previewPoster} alt={formatted?.name || "Event poster"} className="w-full max-h-[80vh] object-contain rounded-xl" />
+              <div className="w-full max-h-[85vh] flex items-center justify-center">
+                <img src={previewPoster} alt={formatted?.name || "Event poster"} className="max-h-[85vh] w-auto object-contain rounded-xl" />
+              </div>
             </div>
           </div>
         ) : null}

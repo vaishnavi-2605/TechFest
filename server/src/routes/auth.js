@@ -17,6 +17,16 @@ function signToken(user) {
   );
 }
 
+function getEffectiveRole(user) {
+  const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  if (signatureEmail && String(user.email || "").trim().toLowerCase() === signatureEmail) {
+    return "coordinator";
+  }
+  return user.role;
+}
+
 router.post("/register-coordinator", upload.single("photo"), async (req, res) => {
   try {
     const { name, username, coordinatorRole, department, phone, email, password, photoUrl } = req.body || {};
@@ -81,7 +91,12 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
       await user.save();
     }
 
-    const token = signToken(user);
+    const effectiveRole = getEffectiveRole(user);
+    const token = jwt.sign(
+      { id: user._id.toString(), role: effectiveRole, email: user.email, username: user.username, name: user.name },
+      process.env.JWT_SECRET || "techfest-dev-secret",
+      { expiresIn: "7d" }
+    );
 
     return res.status(201).json({
       message: "Coordinator registered.",
@@ -91,7 +106,7 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
         name: user.name,
         username: user.username,
         email: user.email,
-        role: user.role,
+        role: effectiveRole,
         coordinatorRole: user.coordinatorRole || "Event Coordinator",
         department: user.department,
         phone: user.phone,
@@ -142,13 +157,14 @@ router.post("/login", async (req, res) => {
 router.get("/me", requireAuth, async (req, res) => {
   const user = await User.findById(req.user.id).lean();
   if (!user) return res.status(404).json({ error: "User not found." });
+  const effectiveRole = getEffectiveRole(user);
   return res.json({
     user: {
       id: user._id,
       name: user.name,
       username: user.username || "",
       email: user.email,
-      role: user.role,
+      role: effectiveRole,
       coordinatorRole: user.coordinatorRole || "Event Coordinator",
       department: user.department,
       phone: user.phone,

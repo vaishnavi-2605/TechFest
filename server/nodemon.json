@@ -1,0 +1,7 @@
+{
+  "watch": ["src"],
+  "ignore": ["uploads"],
+  "ext": "js,mjs,cjs,json",
+  "signal": "SIGTERM",
+  "delay": "200"
+}

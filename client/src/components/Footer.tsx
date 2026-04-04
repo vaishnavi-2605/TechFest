@@ -31,7 +31,7 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground">
               KBT College of Engineering, Nashik
             </p>
-            <p className="text-sm text-muted-foreground mt-1">April 11, 2026</p>
+            <p className="text-sm text-muted-foreground mt-1">April 18, 2026</p>
           </div>
 
           <div>

@@ -50,6 +50,7 @@ const eventSchema = new mongoose.Schema(
     time: { type: String, required: true, trim: true },
     guide: { type: String, required: true, trim: true },
     guidePhone: { type: String, default: "N/A", trim: true },
+    registrationClosed: { type: Boolean, default: false },
     coordinatorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: { type: String, enum: ["pending", "active"], default: "active" },
     approvedAt: { type: Date },

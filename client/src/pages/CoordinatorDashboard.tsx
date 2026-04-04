@@ -5,7 +5,7 @@ import { Download, Image as ImageIcon, Search } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatDateLabel, parseEventDate, resolveApiAssetUrl } from "@/data/helpers";
-import { deleteCoordinatorEvent, deleteCoordinatorSponsor, fetchCoordinatorMe, fetchCoordinatorParticipants, fetchCoordinatorSponsors, markCoordinatorNotificationsRead } from "@/data/api";
+import { deleteCoordinatorEvent, deleteCoordinatorSponsor, deleteParticipant, fetchCoordinatorMe, fetchCoordinatorParticipants, fetchCoordinatorSponsors, markCoordinatorNotificationsRead, updateCoordinatorRegistrationStatus } from "@/data/api";
 import { clearAuth, getAuth } from "@/data/auth";
 import { Sponsor } from "@/types";
 
@@ -25,6 +25,7 @@ type CoordinatorProfile = {
   department?: string;
   photoUrl?: string;
   coordinatorRole?: string;
+  isSignatureCoordinator?: boolean;
   notifications?: Array<{ message?: string; isRead?: boolean; createdAt?: string }>;
 };
 
@@ -88,6 +89,7 @@ const CoordinatorDashboardPage = () => {
   const [participantQuery, setParticipantQuery] = useState("");
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingRegistrationId, setUpdatingRegistrationId] = useState("");
 
   function hydrateFromCache() {
     try {
@@ -124,11 +126,13 @@ const CoordinatorDashboardPage = () => {
         sponsors: nextSponsors
       }));
 
-      const notifications = coordinator?.notifications || [];
-      const unread = notifications.filter((item) => !item.isRead && String(item.message || "").trim());
-      if (unread.length) {
-        setAlert((prev) => prev || String(unread[0].message || "You have a new notification."));
-        markCoordinatorNotificationsRead().catch(() => undefined);
+      if (!coordinator?.isSignatureCoordinator) {
+        const notifications = coordinator?.notifications || [];
+        const unread = notifications.filter((item) => !item.isRead && String(item.message || "").trim());
+        if (unread.length) {
+          setAlert((prev) => prev || String(unread[0].message || "You have a new notification."));
+          markCoordinatorNotificationsRead().catch(() => undefined);
+        }
       }
     } finally {
       setLoading(false);
@@ -144,6 +148,35 @@ const CoordinatorDashboardPage = () => {
       setAlert("Event deleted successfully.");
     } catch (error) {
       setAlert(error instanceof Error ? error.message : "Failed to delete event.");
+    }
+  }
+
+  async function handleToggleRegistration(eventId?: string, closed?: boolean) {
+    if (!eventId) return;
+    try {
+      setUpdatingRegistrationId(eventId);
+      setAlert("");
+      await updateCoordinatorRegistrationStatus(eventId, !closed);
+      await load();
+      setAlert(!closed ? "Registrations closed for this event." : "Registrations reopened for this event.");
+    } catch (error) {
+      setAlert(error instanceof Error ? error.message : "Failed to update registration status.");
+    } finally {
+      setUpdatingRegistrationId("");
+    }
+  }
+
+  async function handleRemoveParticipant(id?: string) {
+    if (!id) return;
+    const ok = window.confirm("Remove this participant? This cannot be undone.");
+    if (!ok) return;
+    try {
+      setAlert("");
+      await deleteParticipant(id);
+      await load();
+      setAlert("Participant removed.");
+    } catch (error) {
+      setAlert(error instanceof Error ? error.message : "Failed to remove participant.");
     }
   }
 
@@ -257,11 +290,17 @@ const CoordinatorDashboardPage = () => {
   const profilePhoto =
     resolveApiAssetUrl(profile?.photoUrl) ||
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560'><rect width='100%' height='100%' fill='%230b1f4a'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239fc8ff' font-family='Arial' font-size='44'>Coordinator</text></svg>";
+  const isSignatureCoordinator = Boolean(profile?.isSignatureCoordinator);
 
   return (
     <div className="pt-28 pb-20">
       <div className="container mx-auto px-4 max-w-5xl space-y-6">
-        <SectionHeader title="Coordinator Dashboard" subtitle="Manage profile, add events, and view participants for your events." />
+        <SectionHeader
+          title="Coordinator Dashboard"
+          subtitle={isSignatureCoordinator
+            ? "View the signature event details and participant registrations."
+            : "Manage profile, add events, and view participants for your events."}
+        />
 
         <div className="glass-card p-6 flex items-center justify-between gap-4">
           <div>
@@ -306,27 +345,33 @@ const CoordinatorDashboardPage = () => {
               onClick={() => navigate("/coordinator/add-event")}
               className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
             >
-              Add Event
+              {isSignatureCoordinator ? "Add Signature Event" : "Add Event"}
             </button>
-            <button
-              onClick={() => navigate("/coordinator/add-sponsor")}
-              className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
-            >
-              Add Sponsor
-            </button>
-            <button
-              onClick={() => navigate("/coordinator/update-profile")}
-              className="w-full py-3 rounded-lg border border-white/15 text-muted-foreground"
-            >
-              Update Profile
-            </button>
+            {!isSignatureCoordinator && (
+              <button
+                onClick={() => navigate("/coordinator/add-sponsor")}
+                className="w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold"
+              >
+                Add Sponsor
+              </button>
+            )}
+            {!isSignatureCoordinator && (
+              <button
+                onClick={() => navigate("/coordinator/update-profile")}
+                className="w-full py-3 rounded-lg border border-white/15 text-muted-foreground"
+              >
+                Update Profile
+              </button>
+            )}
           </div>
         </section>
 
         {!!alert && <p className="text-sm text-cyan-100/80 px-1">{alert}</p>}
 
         <section className="glass-card p-6">
-          <h3 className="font-heading text-lg font-bold text-foreground mb-4">My Events</h3>
+          <h3 className="font-heading text-lg font-bold text-foreground mb-4">
+            {isSignatureCoordinator ? "Signature Event" : "My Events"}
+          </h3>
           {loading && !profile && !events.length ? (
             <p className="text-sm text-muted-foreground mb-4">Loading dashboard...</p>
           ) : null}
@@ -385,8 +430,18 @@ const CoordinatorDashboardPage = () => {
                     <p className="text-sm text-muted-foreground">
                       <span className="text-foreground font-semibold">Venue:</span> {event.address || "To be announced"}
                     </p>
-                    {event._id ? (
+                    {event._id && !isSignatureCoordinator ? (
                       <div className="flex flex-wrap gap-3 mt-3 mt-auto">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRegistration(event._id, Boolean((event as { registrationClosed?: boolean }).registrationClosed))}
+                          disabled={updatingRegistrationId === event._id}
+                          className="px-4 py-2 rounded-full text-sm font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-60"
+                        >
+                          {Boolean((event as { registrationClosed?: boolean }).registrationClosed)
+                            ? "Open Registration (This Event)"
+                            : "Close Registration (This Event)"}
+                        </button>
                         <button
                           type="button"
                           onClick={() => navigate(`/coordinator/events/${event._id}/edit`)}
@@ -409,63 +464,65 @@ const CoordinatorDashboardPage = () => {
             );})}
             {!events.length ? (
               <div className="rounded-xl border border-white/10 bg-card/40 p-4 text-muted-foreground">
-                No events yet. Click Add Event to create your first event.
+                {isSignatureCoordinator ? "No signature event assigned yet." : "No events yet. Click Add Event to create your first event."}
               </div>
             ) : null}
           </div>
         </section>
 
-        <section className="glass-card p-6 space-y-6">
-          <div>
-            <h3 className="font-heading text-lg font-bold text-foreground mb-1">Sponsors</h3>
-            <p className="text-sm text-muted-foreground">Add sponsors using the same tier format shown on the public sponsors sections.</p>
-          </div>
-
-          {(["Title", "Gold", "Silver"] as Sponsor["tier"][]).map((tier) => {
-            const items = sponsors.filter((sponsor) => sponsor.tier === tier);
-            if (!items.length) return null;
-
-            return (
-              <div key={tier}>
-                <h4 className="font-heading text-base font-bold text-foreground mb-4">{tier} Sponsors</h4>
-                <div className={`grid gap-6 justify-items-center ${
-                  tier === "Title" ? "grid-cols-1" : tier === "Gold" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
-                }`}>
-                  {items.map((sponsor) => (
-                    <div
-                      key={sponsor.id}
-                      className={`glass-card card-hover-glow p-8 w-full text-center grayscale hover:grayscale-0 transition-all duration-300 ${
-                        tier === "Title" ? "max-w-md mx-auto py-12" : ""
-                      }`}
-                    >
-                      {sponsor.url ? (
-                        <a href={sponsor.url} target="_blank" rel="noreferrer" className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>
-                          {sponsor.name}
-                        </a>
-                      ) : (
-                        <span className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>{sponsor.name}</span>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">{tier} Sponsor</p>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSponsor(sponsor.id)}
-                        className="mt-4 px-4 py-2 rounded-full text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
-                      >
-                        Delete Sponsor
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {!sponsors.length ? (
-            <div className="rounded-xl border border-white/10 bg-card/40 p-4 text-muted-foreground">
-              No sponsors added yet.
+        {!isSignatureCoordinator && (
+          <section className="glass-card p-6 space-y-6">
+            <div>
+              <h3 className="font-heading text-lg font-bold text-foreground mb-1">Sponsors</h3>
+              <p className="text-sm text-muted-foreground">Add sponsors using the same tier format shown on the public sponsors sections.</p>
             </div>
-          ) : null}
-        </section>
+
+            {(["Title", "Gold", "Silver"] as Sponsor["tier"][]).map((tier) => {
+              const items = sponsors.filter((sponsor) => sponsor.tier === tier);
+              if (!items.length) return null;
+
+              return (
+                <div key={tier}>
+                  <h4 className="font-heading text-base font-bold text-foreground mb-4">{tier} Sponsors</h4>
+                  <div className={`grid gap-6 justify-items-center ${
+                    tier === "Title" ? "grid-cols-1" : tier === "Gold" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
+                  }`}>
+                    {items.map((sponsor) => (
+                      <div
+                        key={sponsor.id}
+                        className={`glass-card card-hover-glow p-8 w-full text-center grayscale hover:grayscale-0 transition-all duration-300 ${
+                          tier === "Title" ? "max-w-md mx-auto py-12" : ""
+                        }`}
+                      >
+                        {sponsor.url ? (
+                          <a href={sponsor.url} target="_blank" rel="noreferrer" className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>
+                            {sponsor.name}
+                          </a>
+                        ) : (
+                          <span className={`font-heading font-bold ${sponsorTierStyles[tier]}`}>{sponsor.name}</span>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">{tier} Sponsor</p>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSponsor(sponsor.id)}
+                          className="mt-4 px-4 py-2 rounded-full text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
+                        >
+                          Delete Sponsor
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {!sponsors.length ? (
+              <div className="rounded-xl border border-white/10 bg-card/40 p-4 text-muted-foreground">
+                No sponsors added yet.
+              </div>
+            ) : null}
+          </section>
+        )}
 
         <section className="glass-card p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
@@ -511,6 +568,7 @@ const CoordinatorDashboardPage = () => {
                   <th className="py-3 px-4">College</th>
                   <th className="py-3 px-4">Department</th>
                   <th className="py-3 px-4">Payment</th>
+                  <th className="py-3 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -524,11 +582,20 @@ const CoordinatorDashboardPage = () => {
                     <td className="py-3 px-4">{row.studentCollege || "N/A"}</td>
                     <td className="py-3 px-4">{row.studentDepartment || "N/A"}</td>
                     <td className="py-3 px-4">{row.paymentRef || "N/A"}</td>
+                    <td className="py-3 px-4">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveParticipant((row as { id?: string }).id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {!participantRows.length ? (
                   <tr>
-                    <td className="py-4 px-4 text-muted-foreground" colSpan={8}>
+                    <td className="py-4 px-4 text-muted-foreground" colSpan={9}>
                       No participants yet.
                     </td>
                   </tr>
@@ -541,20 +608,22 @@ const CoordinatorDashboardPage = () => {
         {previewPoster ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPoster(null)}>
             <div
-              className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-card/95 p-3"
+              className="relative w-full max-w-[820px] rounded-2xl border border-white/10 bg-card/95 p-3"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setPreviewPoster(null)}
-                className="absolute right-3 top-3 rounded-full bg-muted/70 px-3 py-1 text-xs text-foreground hover:bg-muted"
+                className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs text-white hover:bg-black/80"
               >
                 Close
               </button>
               {previewPoster.title ? (
                 <p className="text-sm text-muted-foreground px-2 pb-2">{previewPoster.title}</p>
               ) : null}
-              <img src={previewPoster.url} alt={previewPoster.title || "Event poster"} className="w-full max-h-[80vh] object-contain rounded-xl" />
+              <div className="w-full max-h-[85vh] flex items-center justify-center">
+                <img src={previewPoster.url} alt={previewPoster.title || "Event poster"} className="max-h-[85vh] w-auto object-contain rounded-xl" />
+              </div>
             </div>
           </div>
         ) : null}

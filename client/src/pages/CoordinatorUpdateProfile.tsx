@@ -9,6 +9,7 @@ const departmentOptions = [
   "Computer Engineering",
   "Information Technology",
   "Electronics and Telecommunication",
+  "Instrumentation and Control Engineering",
   "Mechanical Engineering",
   "Civil Engineering",
   "Artificial Intelligence and Data Science",

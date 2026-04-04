@@ -4,7 +4,7 @@ import { Image as ImageIcon } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import SectionHeader from "@/components/SectionHeader";
 import { deleteAdminCoordinator, deleteAdminEvent, fetchAdminCoordinatorDetails, updateAdminEventStatus } from "@/data/api";
-import { getAuth } from "@/data/auth";
+import { clearAuth, getAuth } from "@/data/auth";
 import { formatDateLabel, resolveApiAssetUrl } from "@/data/helpers";
 
 type CoordinatorEvent = {
@@ -62,6 +62,19 @@ const AdminCoordinatorDetailsPage = () => {
   const [deleting, setDeleting] = useState(false);
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
 
+  function handleAdminAccessError(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("Signature coordinator cannot access admin routes") ||
+      message.includes("permission")
+    ) {
+      clearAuth();
+      navigate("/portal");
+      return true;
+    }
+    return false;
+  }
+
   async function load() {
     const data = await fetchAdminCoordinatorDetails(coordinatorId);
     const nextDetails = (data.coordinator || null) as CoordinatorDetails | null;
@@ -94,7 +107,10 @@ const AdminCoordinatorDetailsPage = () => {
       if (cachedPreview) setDetails(cachedPreview);
     }
 
-    load().catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load coordinator details."));
+    load().catch((error) => {
+      if (handleAdminAccessError(error)) return;
+      setAlert(error instanceof Error ? error.message : "Failed to load coordinator details.");
+    });
   }, [navigate, coordinatorId, routePreview]);
 
   async function handleApproveEvent(eventDbId: string) {
@@ -105,6 +121,7 @@ const AdminCoordinatorDetailsPage = () => {
       await load();
       setAlert("Event approved successfully.");
     } catch (error) {
+      if (handleAdminAccessError(error)) return;
       setAlert(error instanceof Error ? error.message : "Failed to approve event.");
     } finally {
       setBusyEventId("");
@@ -122,6 +139,7 @@ const AdminCoordinatorDetailsPage = () => {
       await load();
       setAlert("Event deleted. Coordinator has been notified.");
     } catch (error) {
+      if (handleAdminAccessError(error)) return;
       setAlert(error instanceof Error ? error.message : "Failed to delete event.");
     } finally {
       setDeletingEventId("");
@@ -138,6 +156,7 @@ const AdminCoordinatorDetailsPage = () => {
       await deleteAdminCoordinator(details.id);
       navigate("/admin/dashboard");
     } catch (error) {
+      if (handleAdminAccessError(error)) return;
       setAlert(error instanceof Error ? error.message : "Failed to delete coordinator.");
     } finally {
       setDeleting(false);
@@ -270,20 +289,22 @@ const AdminCoordinatorDetailsPage = () => {
         {previewPoster ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewPoster(null)}>
             <div
-              className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-card/95 p-3"
+              className="relative w-full max-w-[820px] rounded-2xl border border-white/10 bg-card/95 p-3"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setPreviewPoster(null)}
-                className="absolute right-3 top-3 rounded-full bg-muted/70 px-3 py-1 text-xs text-foreground hover:bg-muted"
+                className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs text-white hover:bg-black/80"
               >
                 Close
               </button>
               {previewPoster.title ? (
                 <p className="text-sm text-muted-foreground px-2 pb-2">{previewPoster.title}</p>
               ) : null}
-              <img src={previewPoster.url} alt={previewPoster.title || "Event poster"} className="w-full max-h-[80vh] object-contain rounded-xl" />
+              <div className="w-full max-h-[85vh] flex items-center justify-center">
+                <img src={previewPoster.url} alt={previewPoster.title || "Event poster"} className="max-h-[85vh] w-auto object-contain rounded-xl" />
+              </div>
             </div>
           </div>
         ) : null}

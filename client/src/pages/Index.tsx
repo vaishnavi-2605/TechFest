@@ -8,7 +8,7 @@ import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { fetchEvents, fetchEventStats, fetchSponsors } from "@/data/api";
-import { formatBackendEvent, formatShortDateLabel, parseEventDate, parseEventDateTime } from "@/data/helpers";
+import { formatBackendEvent, formatShortDateLabel, parseEventDate, parseEventDateTime, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent, Sponsor } from "@/types";
 import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-react";
 
@@ -86,7 +86,10 @@ const HeroSection = ({ nextEventDate, nextEventTimeText }: { nextEventDate: stri
       <div className="absolute top-1/3 right-1/4 w-12 h-12 border border-primary/15 rotate-45 animate-float opacity-20" style={{ animationDelay: "4s" }} />
 
       <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <motion.div variants={item} className="flex items-center justify-center gap-2 mb-4">
+        <motion.div variants={item} className="flex justify-center mb-0">
+          <img src="/logos/logo1.png" alt="TechFest logo 1" className="w-56 h-56 object-contain" />
+        </motion.div>
+        <motion.div variants={item} className="flex items-center justify-center gap-2 mb-0 -mt-8">
           <Calendar className="w-4 h-4 text-secondary" />
           <span className="text-sm text-secondary font-medium tracking-wide">{nextEventDate}</span>
           <span className="text-muted-foreground mx-2">•</span>
@@ -180,10 +183,88 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
     [activeFilter, formattedEvents]
   );
 
+  // Find signature event (Project Competition)
+  const signatureEvent = useMemo(
+    () =>
+      formattedEvents.find((event) => event.isSignatureEvent) ||
+      formattedEvents.find(
+        (event) => typeof event.name === "string" && event.name.toLowerCase().includes("project competition")
+      ),
+    [formattedEvents]
+  );
+
+  // Filter out signature event from regular events list
+  const regularEvents = useMemo(() =>
+    filteredEvents.filter(event => event.id !== signatureEvent?.id), [filteredEvents, signatureEvent]
+  );
+
   return (
     <section className="py-20 md:py-28 bg-muted/5">
       <div className="container mx-auto px-4">
         <SectionHeader title="Featured Events" subtitle="Compete, innovate, and win big across our flagship events." />
+
+        {/* Signature Event - Project Competition */}
+        {signatureEvent && (
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl md:text-3xl font-heading font-bold signature-title mb-2">
+                Signature Event: Project Competition
+              </h3>
+              <p className="text-muted-foreground">Our flagship competition showcasing innovation and excellence</p>
+            </div>
+            <div className="max-w-md mx-auto">
+              <div className="glass-card signature-card p-6 card-hover-glow border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
+                {resolveApiAssetUrl(signatureEvent.posterUrl) ? (
+                  <div className="mb-4 flex items-center justify-center">
+                    <div className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-card/40 p-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSignaturePoster(resolveApiAssetUrl(signatureEvent.posterUrl) || null)}
+                        className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        aria-label="View signature poster"
+                      >
+                        <img
+                          src={resolveApiAssetUrl(signatureEvent.posterUrl)}
+                          alt={signatureEvent.name}
+                          className="max-h-64 w-auto object-contain"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="text-center mb-4">
+                  <h4 className="text-xl font-heading font-bold text-foreground mb-2">
+                    {signatureEvent.name}
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {signatureEvent.shortDescription || signatureEvent.description}
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    {signatureEvent.prize && (
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        Prize: {signatureEvent.prize}
+                      </span>
+                    )}
+                    <span className="px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
+                      {signatureEvent.category}
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs">
+                      {signatureEvent.isTeamEvent ? `Team (${signatureEvent.teamSize})` : 'Individual'}
+                    </span>
+                  </div>
+                  <Link
+                    to={`/events/${signatureEvent.id}`}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold hover:scale-105 transition-all shadow-lg hover:shadow-[0_0_20px_hsl(263,84%,58%,0.3)]"
+                  >
+                    Register Now <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Other Events */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           {eventFilterOptions.map((option) => (
             <button
@@ -200,7 +281,7 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
             </button>
           ))}
         </div>
-        {!filteredEvents.length ? (
+        {!regularEvents.length ? (
           <p className="text-sm text-muted-foreground text-center mt-8">
             No featured events found for the selected category.
           </p>
@@ -211,7 +292,7 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
               className="w-full"
             >
               <CarouselContent>
-                {filteredEvents.map((event, i) => (
+                {regularEvents.map((event, i) => (
                   <CarouselItem key={event.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
                     <EventCard event={event} index={i} />
                   </CarouselItem>
@@ -277,6 +358,7 @@ const Index = () => {
     sponsorCount: 0,
   });
   const [latestEventTimeText, setLatestEventTimeText] = useState(() => getStoredNextEventTime());
+  const [previewSignaturePoster, setPreviewSignaturePoster] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents()
@@ -327,6 +409,26 @@ const Index = () => {
       <AboutSection stats={stats} />
       <EventsPreview events={events} />
       <SponsorsStrip sponsors={sponsors} />
+      {previewSignaturePoster ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewSignaturePoster(null)}>
+          <div
+            className="relative inline-flex max-w-[90vw] max-h-[85vh] items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-card/95 p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewSignaturePoster(null)}
+              className="absolute right-3 top-3 z-20 rounded-full border border-white/20 bg-black/80 px-3 py-1 text-[11px] text-white shadow-lg hover:bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              aria-label="Close poster preview"
+            >
+              Close
+            </button>
+            <div className="w-full max-h-[80vh] flex items-center justify-center">
+              <img src={previewSignaturePoster} alt="Signature event poster" className="max-h-[80vh] max-w-[85vw] w-auto object-contain rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

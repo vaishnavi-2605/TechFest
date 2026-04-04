@@ -3,12 +3,25 @@ import { useNavigate } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import ParticleBackground from "@/components/ParticleBackground";
 import { deleteAdminMessage, fetchAdminMessages, markAdminMessageRead } from "@/data/api";
-import { getAuth } from "@/data/auth";
+import { clearAuth, getAuth } from "@/data/auth";
 
 const AdminMessagesPage = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [alert, setAlert] = useState("");
+
+  function handleAdminAccessError(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("Signature coordinator cannot access admin routes") ||
+      message.includes("permission")
+    ) {
+      clearAuth();
+      navigate("/portal");
+      return true;
+    }
+    return false;
+  }
 
   async function load() {
     const data = await fetchAdminMessages();
@@ -22,7 +35,10 @@ const AdminMessagesPage = () => {
       navigate("/portal");
       return;
     }
-    load().catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load messages."));
+    load().catch((error) => {
+      if (handleAdminAccessError(error)) return;
+      setAlert(error instanceof Error ? error.message : "Failed to load messages.");
+    });
   }, [navigate]);
 
   return (
@@ -95,4 +111,3 @@ const AdminMessagesPage = () => {
 };
 
 export default AdminMessagesPage;
-

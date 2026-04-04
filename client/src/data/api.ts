@@ -150,6 +150,12 @@ export function deleteAdminMessage(id: string) {
   } as RequestInit & { useAuth: boolean });
 }
 
+export function fetchAdminRegistrations() {
+  return request<{ registrations: Record<string, unknown>[] }>("/api/admin/registrations", {
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
 export function fetchCoordinatorMe() {
   return request<{ coordinator: Record<string, unknown>; events: BackendEvent[] }>("/api/coordinator/me", {
     useAuth: true,
@@ -216,6 +222,28 @@ export function updateCoordinatorEvent(id: string, payload: FormData) {
   return request<{ message: string; event: BackendEvent }>(`/api/coordinator/events/${id}`, {
     method: "PUT",
     body: payload,
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function updateCoordinatorRegistrationStatus(id: string, closed: boolean) {
+  return request<{ message: string; event: BackendEvent }>(`/api/coordinator/events/${id}/registration`, {
+    method: "PATCH",
+    body: JSON.stringify({ closed }),
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function removeDemoParticipants() {
+  return request<{ deleted: number }>("/api/coordinator/participants/demo", {
+    method: "DELETE",
+    useAuth: true,
+  } as RequestInit & { useAuth: boolean });
+}
+
+export function deleteParticipant(id: string) {
+  return request<{ message: string }>(`/api/coordinator/participants/${id}`, {
+    method: "DELETE",
     useAuth: true,
   } as RequestInit & { useAuth: boolean });
 }

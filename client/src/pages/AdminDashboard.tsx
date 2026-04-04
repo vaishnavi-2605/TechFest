@@ -32,6 +32,22 @@ const AdminDashboardPage = () => {
   const [updatingEventId, setUpdatingEventId] = useState("");
   const [loading, setLoading] = useState(true);
 
+  function handleAdminAccessError(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("Signature coordinator cannot access admin routes") ||
+      message.includes("permission")
+    ) {
+      sessionStorage.removeItem(ADMIN_DASHBOARD_CACHE_KEY);
+      setCoordinators([]);
+      setUnread(0);
+      clearAuth();
+      navigate("/portal");
+      return true;
+    }
+    return false;
+  }
+
   function hydrateFromCache() {
     try {
       const cached = JSON.parse(sessionStorage.getItem(ADMIN_DASHBOARD_CACHE_KEY) || "null") as
@@ -58,6 +74,9 @@ const AdminDashboardPage = () => {
         coordinators: nextCoordinators,
         unread: nextUnread
       }));
+    } catch (error) {
+      if (handleAdminAccessError(error)) return;
+      setAlert(error instanceof Error ? error.message : "Failed to load dashboard.");
     } finally {
       setLoading(false);
     }
@@ -72,8 +91,7 @@ const AdminDashboardPage = () => {
     }
 
     hydrateFromCache();
-    loadDashboard()
-      .catch((error) => setAlert(error instanceof Error ? error.message : "Failed to load dashboard."));
+    loadDashboard();
   }, [navigate]);
 
   async function handleApproveEvent(eventDbId: string) {
@@ -96,10 +114,13 @@ const AdminDashboardPage = () => {
         <SectionHeader title="Admin Dashboard" subtitle="View coordinator profiles and approve events before they appear publicly." />
         <div className="flex justify-end">
           <div className="flex gap-3">
+            <Link to="/admin/registrations" className="px-5 py-3 rounded-lg border border-white/15 text-muted-foreground">
+              View Registrations
+            </Link>
             <Link to="/admin/messages" className="relative px-5 py-3 rounded-lg border border-white/15 text-muted-foreground">
               Notifications
               {unread > 0 ? (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               ) : null}
             </Link>
             <button onClick={() => { clearAuth(); navigate("/"); }} className="px-5 py-3 rounded-lg border border-white/15 text-muted-foreground">

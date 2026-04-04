@@ -18,6 +18,7 @@ import PortalAuthPage from "./pages/PortalAuth";
 import AdminLoginPage from "./pages/AdminLogin";
 import AdminDashboardPage from "./pages/AdminDashboard";
 import AdminMessagesPage from "./pages/AdminMessages";
+import AdminRegistrationsPage from "./pages/AdminRegistrations";
 import AdminCoordinatorDetailsPage from "./pages/AdminCoordinatorDetails";
 import CoordinatorDashboardPage from "./pages/CoordinatorDashboard";
 import CoordinatorAddEventPage from "./pages/CoordinatorAddEvent";
@@ -62,6 +63,7 @@ const AnimatedRoutes = () => {
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/coordinators/:coordinatorId" element={<AdminCoordinatorDetailsPage />} />
           <Route path="/admin/messages" element={<AdminMessagesPage />} />
+          <Route path="/admin/registrations" element={<AdminRegistrationsPage />} />
           <Route path="/coordinator/dashboard" element={<CoordinatorDashboardPage />} />
           <Route path="/coordinator/add-event" element={<CoordinatorAddEventPage />} />
           <Route path="/coordinator/add-sponsor" element={<CoordinatorAddSponsorPage />} />
