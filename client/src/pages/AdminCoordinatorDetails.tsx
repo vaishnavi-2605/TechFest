@@ -81,7 +81,11 @@ const AdminCoordinatorDetailsPage = () => {
     setDetails(nextDetails);
     if (nextDetails?.id) {
       try {
-        sessionStorage.setItem(`${ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX}${nextDetails.id}`, JSON.stringify(nextDetails));
+        try {
+          sessionStorage.setItem(`${ADMIN_COORDINATOR_PREVIEW_CACHE_PREFIX}${nextDetails.id}`, JSON.stringify(nextDetails));
+        } catch (_error) {
+          // Ignore storage quota errors.
+        }
       } catch {
         // ignore storage errors
       }

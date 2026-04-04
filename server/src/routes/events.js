@@ -16,6 +16,16 @@ function getActiveEventQuery() {
   };
 }
 
+function normalizeEventType(value) {
+  const raw = String(value || "").trim();
+  if (raw === "Technical" || raw === "Non-Technical" || raw === "Workshop") return raw;
+  const lower = raw.toLowerCase();
+  if (lower.includes("non")) return "Non-Technical";
+  if (lower.includes("work")) return "Workshop";
+  if (lower.includes("tech")) return "Technical";
+  return "";
+}
+
 async function getSignatureCoordinatorId() {
   const signatureCoordinatorEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "")
     .trim()
@@ -92,6 +102,8 @@ router.get("/", async (req, res) => {
     res.json({
       events: events.map((event) => ({
         ...event,
+        eventType: normalizeEventType(event.eventType) || normalizeEventType(event.displayCategory) || "Technical",
+        displayCategory: normalizeEventType(event.displayCategory) || normalizeEventType(event.eventType) || "",
         isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
         registrationClosed: Boolean(event.registrationClosed),
         posterUrl: getResolvedImageUrl(event, "poster", req, "events"),
@@ -136,6 +148,8 @@ router.get("/:eventId", async (req, res) => {
     return res.json({
       event: {
         ...event,
+        eventType: normalizeEventType(event.eventType) || normalizeEventType(event.displayCategory) || "Technical",
+        displayCategory: normalizeEventType(event.displayCategory) || normalizeEventType(event.eventType) || "",
         isSignatureEvent: isSignatureEventMatch(event, signatureCoordinatorId),
         registrationClosed: Boolean(event.registrationClosed),
         posterUrl: getResolvedImageUrl(event, "poster", req, "events"),

@@ -119,12 +119,16 @@ const CoordinatorDashboardPage = () => {
       setEvents(nextEvents);
       setParticipants(nextParticipants);
       setSponsors(nextSponsors);
-      sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
-        profile: coordinator,
-        events: nextEvents,
-        participants: nextParticipants,
-        sponsors: nextSponsors
-      }));
+      try {
+        sessionStorage.setItem(COORDINATOR_DASHBOARD_CACHE_KEY, JSON.stringify({
+          profile: coordinator,
+          events: nextEvents,
+          participants: nextParticipants,
+          sponsors: nextSponsors
+        }));
+      } catch (_error) {
+        // Ignore storage quota errors.
+      }
 
       if (!coordinator?.isSignatureCoordinator) {
         const notifications = coordinator?.notifications || [];
