@@ -166,6 +166,7 @@ router.get("/participants", async (req, res) => {
     const participants = eventIds.length
       ? await Registration.find({ eventId: { $in: eventIds } })
           .select({
+            _id: 1,
             registrationId: 1,
             fullName: 1,
             teamMembers: 1,
@@ -181,7 +182,12 @@ router.get("/participants", async (req, res) => {
           .lean()
       : [];
 
-    return res.json({ participants });
+    return res.json({
+      participants: participants.map((row) => ({
+        ...row,
+        id: String(row._id || "")
+      }))
+    });
   } catch (_error) {
     return res.status(500).json({ error: "Failed to load participants." });
   }

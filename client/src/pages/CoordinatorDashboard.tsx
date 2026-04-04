@@ -589,7 +589,7 @@ const CoordinatorDashboardPage = () => {
                     <td className="py-3 px-4">
                       <button
                         type="button"
-                        onClick={() => handleRemoveParticipant((row as { id?: string }).id)}
+                        onClick={() => handleRemoveParticipant((row as { id?: string; _id?: string }).id || (row as { _id?: string })._id)}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
                       >
                         Remove
