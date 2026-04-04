@@ -181,6 +181,10 @@ export function getCategoryFromDepartment(department?: string): Event["category"
   return "Workshops";
 }
 
+function isTechTankTitle(title?: string) {
+  return /tech[\s-]?tank/i.test(String(title || ""));
+}
+
 function normalizeEventCategory(raw?: string): Event["category"] | "" {
   const value = String(raw || "").trim().toLowerCase();
   if (!value) return "";
@@ -201,6 +205,7 @@ export function formatBackendEvent(event: BackendEvent): Event {
     normalizeEventCategory(event.eventType) ||
     normalizeEventCategory(event.displayCategory) ||
     getCategoryFromDepartment(event.department);
+  const forcedCategory = isTechTankTitle(event.title) ? "Technical" : "";
 
   return {
     id: event.eventId,
@@ -208,7 +213,7 @@ export function formatBackendEvent(event: BackendEvent): Event {
     name: event.title,
     description: event.shortDescription || event.description,
     shortDescription: event.shortDescription || "",
-    category: normalizedCategory,
+    category: forcedCategory || normalizedCategory,
     teamSize: event.displayTeamSize || (event.isTeamEvent && maxTeam > 1 ? `1-${maxTeam}` : "1"),
     prize: event.displayPrize || (event.fee > 0 ? `₹ ${event.fee}` : "Free"),
     displayPrize: event.displayPrize || "",

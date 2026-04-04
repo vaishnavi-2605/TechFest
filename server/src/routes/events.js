@@ -26,9 +26,12 @@ function normalizeEventType(value) {
   return "";
 }
 
+function isTechTankTitle(title) {
+  return /tech[\s-]?tank/i.test(String(title || ""));
+}
+
 function applyEventOverrides(event) {
-  const title = String(event?.title || "").toLowerCase();
-  if (title.includes("tech tank")) {
+  if (isTechTankTitle(event?.title)) {
     return {
       ...event,
       title: "Tech Tank: Equity Wars",
