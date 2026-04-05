@@ -182,7 +182,7 @@ const AdminDashboardPage = () => {
                   <img
                     src={resolveApiAssetUrl(item.photoUrl)}
                     alt={item.name}
-                    className="mb-4 h-40 w-full rounded-xl border border-white/10 object-cover sm:h-44"
+                    className="mb-4 h-40 w-full rounded-xl border border-white/10 bg-card/40 p-2 object-contain sm:h-44"
                     loading="lazy"
                     decoding="async"
                   />
