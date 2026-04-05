@@ -7,6 +7,7 @@ import CountdownTimer from "@/components/CountdownTimer";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
 import PosterPreviewModal from "@/components/PosterPreviewModal";
+import RegisterAction from "@/components/RegisterAction";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { fetchEvents, fetchEventStats, fetchSponsors } from "@/data/api";
 import { formatBackendEvent, formatShortDateLabel, parseEventDate, parseEventDateTime, resolveApiAssetUrl } from "@/data/helpers";
@@ -15,6 +16,10 @@ import { Calendar, MapPin, Trophy, Users, Sparkles, ChevronRight } from "lucide-
 
 const eventFilterOptions = ["All", "Technical", "Non-Technical", "Workshop"] as const;
 const NEXT_EVENT_STORAGE_KEY = "techfestNextEventTime";
+const EVENTS_CACHE_KEY = "techfestHomeEventsCache";
+const SPONSORS_CACHE_KEY = "techfestHomeSponsorsCache";
+const STATS_CACHE_KEY = "techfestHomeStatsCache";
+const HOME_CACHE_TTL_MS = 5 * 60 * 1000;
 
 function matchesEventFilter(category: string, filter: (typeof eventFilterOptions)[number]) {
   if (filter === "All") return true;
@@ -36,6 +41,35 @@ function getStoredNextEventTime() {
     return localStorage.getItem(NEXT_EVENT_STORAGE_KEY) || "";
   } catch {
     return "";
+  }
+}
+
+function getCachedHomeData<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+
+    const parsed = JSON.parse(raw) as { timestamp?: number; data?: T };
+    if (!parsed?.timestamp || Date.now() - parsed.timestamp > HOME_CACHE_TTL_MS) {
+      localStorage.removeItem(key);
+      return fallback;
+    }
+
+    return parsed.data ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setCachedHomeData<T>(key: string, data: T) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data }));
+  } catch {
+    // Ignore storage errors so the homepage still renders.
   }
 }
 
@@ -207,8 +241,6 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
   return (
     <section className="py-20 md:py-28 bg-muted/5">
       <div className="container mx-auto px-4">
-        <SectionHeader title="Featured Events" subtitle="Compete, innovate, and win big across our flagship events." />
-
         {/* Signature Event - Project Competition */}
         {signatureEvent && (
           <div className="mb-12">
@@ -257,20 +289,33 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
                       {signatureEvent.category}
                     </span>
                     <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs">
-                      {signatureEvent.isTeamEvent ? `Team (${signatureEvent.teamSize})` : 'Individual'}
+                      {signatureEvent.isTeamEvent ? `👥 Team (${signatureEvent.teamSize})` : '👥 1-3'}
                     </span>
                   </div>
-                  <Link
-                    to={`/events/${signatureEvent.id}`}
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold hover:scale-105 transition-all shadow-lg hover:shadow-[0_0_20px_hsl(263,84%,58%,0.3)]"
-                  >
-                    Register Now <ChevronRight className="w-4 h-4" />
-                  </Link>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <Link
+                      to={`/events/${signatureEvent.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 px-4 py-3 text-sm font-semibold text-primary transition-all hover:border-primary/60 hover:bg-primary/10"
+                    >
+                      View Details
+                    </Link>
+                    <RegisterAction
+                      eventId={signatureEvent.id}
+                      timeText={signatureEvent.time}
+                      registrationClosed={signatureEvent.registrationClosed}
+                      coordinatorName={signatureEvent.guide}
+                      coordinatorPhone={signatureEvent.guidePhone}
+                      label="Register Now"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-secondary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 shadow-lg hover:shadow-[0_0_20px_hsl(263,84%,58%,0.3)]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        <SectionHeader title="Featured Events" subtitle="Compete, innovate, and win big across our flagship events." />
 
         {/* Other Events */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
@@ -367,21 +412,28 @@ const SponsorsStrip = ({ sponsors }: { sponsors: Sponsor[] }) => {
 };
 
 const Index = () => {
-  const [events, setEvents] = useState<BackendEvent[]>([]);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
-  const [liveStats, setLiveStats] = useState({
-    eventCount: 0,
-    participantCount: 0,
-    prizePool: 0,
-    sponsorCount: 0,
+  const [events, setEvents] = useState<BackendEvent[]>(() => getCachedHomeData(EVENTS_CACHE_KEY, []));
+  const [sponsors, setSponsors] = useState<Sponsor[]>(() => getCachedHomeData(SPONSORS_CACHE_KEY, []));
+  const [liveStats, setLiveStats] = useState(() =>
+    getCachedHomeData(STATS_CACHE_KEY, {
+      eventCount: 0,
+      participantCount: 0,
+      prizePool: 0,
+      sponsorCount: 0,
+    })
+  );
+  const [latestEventTimeText, setLatestEventTimeText] = useState(() => {
+    const cachedEvents = getCachedHomeData<BackendEvent[]>(EVENTS_CACHE_KEY, []);
+    const cachedUpcoming = getUpcomingEventTime(cachedEvents);
+    return cachedUpcoming || getStoredNextEventTime();
   });
-  const [latestEventTimeText, setLatestEventTimeText] = useState(() => getStoredNextEventTime());
 
   useEffect(() => {
     fetchEvents()
       .then((data) => {
         const rows = data.events || [];
         setEvents(rows);
+        setCachedHomeData(EVENTS_CACHE_KEY, rows);
         const upcoming = getUpcomingEventTime(rows);
         if (upcoming) {
           setLatestEventTimeText(upcoming);
@@ -392,15 +444,23 @@ const Index = () => {
           }
         }
       })
-      .catch(() => setEvents([]));
+      .catch(() => undefined);
 
     fetchSponsors()
-      .then((data) => setSponsors(data.sponsors || []))
-      .catch(() => setSponsors([]));
+      .then((data) => {
+        const rows = data.sponsors || [];
+        setSponsors(rows);
+        setCachedHomeData(SPONSORS_CACHE_KEY, rows);
+      })
+      .catch(() => undefined);
 
     fetchEventStats()
-      .then((data) => setLiveStats(data.stats || { eventCount: 0, participantCount: 0, prizePool: 0, sponsorCount: 0 }))
-      .catch(() => setLiveStats({ eventCount: 0, participantCount: 0, prizePool: 0, sponsorCount: 0 }));
+      .then((data) => {
+        const stats = data.stats || { eventCount: 0, participantCount: 0, prizePool: 0, sponsorCount: 0 };
+        setLiveStats(stats);
+        setCachedHomeData(STATS_CACHE_KEY, stats);
+      })
+      .catch(() => undefined);
   }, []);
 
   const latestEventDateLabel = useMemo(() => {

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
 import PosterPreviewModal from "@/components/PosterPreviewModal";
+import RegisterAction from "@/components/RegisterAction";
 import { fetchEvents } from "@/data/api";
 import { formatBackendEvent, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent } from "@/types";
@@ -122,12 +123,23 @@ const EventsPage = () => {
                       {signatureEvent.teamSize}
                     </span>
                   </div>
-                  <Link
-                    to={`/events/${signatureEvent.id}`}
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold hover:scale-105 transition-all shadow-lg hover:shadow-[0_0_20px_hsl(263,84%,58%,0.3)]"
-                  >
-                    Register Now
-                  </Link>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <Link
+                      to={`/events/${signatureEvent.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 px-4 py-3 text-sm font-semibold text-primary transition-all hover:border-primary/60 hover:bg-primary/10"
+                    >
+                      View Details
+                    </Link>
+                    <RegisterAction
+                      eventId={signatureEvent.id}
+                      timeText={signatureEvent.time}
+                      registrationClosed={signatureEvent.registrationClosed}
+                      coordinatorName={signatureEvent.guide}
+                      coordinatorPhone={signatureEvent.guidePhone}
+                      label="Register Now"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-secondary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 shadow-lg hover:shadow-[0_0_20px_hsl(263,84%,58%,0.3)]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
