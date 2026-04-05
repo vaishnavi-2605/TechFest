@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
+import PosterPreviewModal from "@/components/PosterPreviewModal";
 import { fetchEvents } from "@/data/api";
 import { formatBackendEvent, resolveApiAssetUrl } from "@/data/helpers";
 import { BackendEvent } from "@/types";
@@ -31,7 +32,7 @@ const EventsPage = () => {
   const [events, setEvents] = useState<BackendEvent[]>(() => readCachedEvents());
   const [activeFilter, setActiveFilter] = useState<(typeof eventFilterOptions)[number]>("All");
   const [loading, setLoading] = useState(events.length === 0);
-  const [previewSignaturePoster, setPreviewSignaturePoster] = useState<string | null>(null);
+  const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -84,18 +85,20 @@ const EventsPage = () => {
                 {resolveApiAssetUrl(signatureEvent.posterUrl) ? (
                   <div className="mb-4 flex items-center justify-center">
                     <div className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-card/40 p-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewSignaturePoster(resolveApiAssetUrl(signatureEvent.posterUrl) || null)}
-                      className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                      aria-label="View signature poster"
-                    >
-                      <img
-                        src={resolveApiAssetUrl(signatureEvent.posterUrl)}
-                        alt={signatureEvent.name}
-                        className="max-h-64 w-auto object-contain"
-                      />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPoster({ url: resolveApiAssetUrl(signatureEvent.posterUrl), title: signatureEvent.name })}
+                        className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        aria-label="View signature poster"
+                      >
+                        <img
+                          src={resolveApiAssetUrl(signatureEvent.posterUrl)}
+                          alt={signatureEvent.name}
+                          className="max-h-64 w-auto object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </button>
                     </div>
                   </div>
                 ) : null}
@@ -165,30 +168,22 @@ const EventsPage = () => {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {regularEvents.map((event, i) => (
-              <EventCard key={event.id} event={event} index={i} />
+              <EventCard
+                key={event.id}
+                event={event}
+                index={i}
+                onPosterPreview={(poster) => setPreviewPoster(poster)}
+              />
             ))}
           </motion.div>
         )}
       </div>
-      {previewSignaturePoster ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewSignaturePoster(null)}>
-          <div
-            className="relative w-full max-w-[820px] rounded-2xl border border-white/10 bg-card/95 p-6 pt-10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setPreviewSignaturePoster(null)}
-              className="absolute right-2 top-2 z-20 rounded-full bg-black/80 px-3 py-1 text-xs text-white shadow-lg hover:bg-black"
-            >
-              Close
-            </button>
-            <div className="w-full max-h-[85vh] flex items-center justify-center">
-              <img src={previewSignaturePoster} alt="Signature event poster" className="max-h-[85vh] w-auto object-contain rounded-xl" />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <PosterPreviewModal
+        open={Boolean(previewPoster?.url)}
+        imageUrl={previewPoster?.url}
+        title={previewPoster?.title}
+        onClose={() => setPreviewPoster(null)}
+      />
     </div>
   );
 };

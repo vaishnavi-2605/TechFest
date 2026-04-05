@@ -6,6 +6,7 @@ import ParticleBackground from "@/components/ParticleBackground";
 import CountdownTimer from "@/components/CountdownTimer";
 import SectionHeader from "@/components/SectionHeader";
 import EventCard from "@/components/EventCard";
+import PosterPreviewModal from "@/components/PosterPreviewModal";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { fetchEvents, fetchEventStats, fetchSponsors } from "@/data/api";
 import { formatBackendEvent, formatShortDateLabel, parseEventDate, parseEventDateTime, resolveApiAssetUrl } from "@/data/helpers";
@@ -31,7 +32,11 @@ function getUpcomingEventTime(rows: BackendEvent[]) {
 
 function getStoredNextEventTime() {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(NEXT_EVENT_STORAGE_KEY) || "";
+  try {
+    return localStorage.getItem(NEXT_EVENT_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
 }
 
 function extractPrizeAmount(displayPrize?: string) {
@@ -177,6 +182,7 @@ const AboutSection = ({ stats }: { stats: { label: string; value: number; icon: 
 
 const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
   const [activeFilter, setActiveFilter] = useState<(typeof eventFilterOptions)[number]>("All");
+  const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
   const formattedEvents = useMemo(() => events.map(formatBackendEvent), [events]);
   const filteredEvents = useMemo(
     () => formattedEvents.filter((event) => matchesEventFilter(event.category, activeFilter)),
@@ -219,7 +225,7 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
                     <div className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-card/40 p-2">
                       <button
                         type="button"
-                        onClick={() => setPreviewSignaturePoster(resolveApiAssetUrl(signatureEvent.posterUrl) || null)}
+                        onClick={() => setPreviewPoster({ url: resolveApiAssetUrl(signatureEvent.posterUrl), title: signatureEvent.name })}
                         className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                         aria-label="View signature poster"
                       >
@@ -227,6 +233,8 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
                           src={resolveApiAssetUrl(signatureEvent.posterUrl)}
                           alt={signatureEvent.name}
                           className="max-h-64 w-auto object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </button>
                     </div>
@@ -294,7 +302,11 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
               <CarouselContent>
                 {regularEvents.map((event, i) => (
                   <CarouselItem key={event.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
-                    <EventCard event={event} index={i} />
+                    <EventCard
+                      event={event}
+                      index={i}
+                      onPosterPreview={(poster) => setPreviewPoster(poster)}
+                    />
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -308,6 +320,12 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
             View All Events <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
+        <PosterPreviewModal
+          open={Boolean(previewPoster?.url)}
+          imageUrl={previewPoster?.url}
+          title={previewPoster?.title}
+          onClose={() => setPreviewPoster(null)}
+        />
       </div>
     </section>
   );
@@ -358,7 +376,6 @@ const Index = () => {
     sponsorCount: 0,
   });
   const [latestEventTimeText, setLatestEventTimeText] = useState(() => getStoredNextEventTime());
-  const [previewSignaturePoster, setPreviewSignaturePoster] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents()
@@ -413,26 +430,6 @@ const Index = () => {
       <AboutSection stats={stats} />
       <EventsPreview events={events} />
       <SponsorsStrip sponsors={sponsors} />
-      {previewSignaturePoster ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewSignaturePoster(null)}>
-          <div
-            className="relative inline-flex max-w-[90vw] max-h-[85vh] items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-card/95 p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setPreviewSignaturePoster(null)}
-              className="absolute right-3 top-3 z-20 rounded-full border border-white/20 bg-black/80 px-3 py-1 text-[11px] text-white shadow-lg hover:bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-              aria-label="Close poster preview"
-            >
-              Close
-            </button>
-            <div className="w-full max-h-[80vh] flex items-center justify-center">
-              <img src={previewSignaturePoster} alt="Signature event poster" className="max-h-[80vh] max-w-[85vw] w-auto object-contain rounded-2xl" />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 };
