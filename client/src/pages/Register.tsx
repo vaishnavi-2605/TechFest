@@ -8,7 +8,7 @@ import { BackendEvent } from "@/types";
 import { Check, ChevronLeft, ChevronRight, Image as ImageIcon, PartyPopper } from "lucide-react";
 
 const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
-const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:";
+const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:v2:";
 const steps = ["Participant Details", "Payment", "Join & Pass"];
 const departmentOptions = [
   "Computer Engineering",

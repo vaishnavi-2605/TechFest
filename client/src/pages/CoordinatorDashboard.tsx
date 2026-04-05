@@ -99,7 +99,9 @@ const CoordinatorDashboardPage = () => {
       if (!cached) return false;
       setProfile(cached.profile || null);
       setEvents(cached.events || []);
-      setParticipants(cached.participants || []);
+      const cachedParticipants = Array.isArray(cached.participants) ? cached.participants : [];
+      const hasStableIds = cachedParticipants.every((row) => row?.id || row?._id);
+      setParticipants(hasStableIds ? cachedParticipants : []);
       setSponsors(cached.sponsors || []);
       return true;
     } catch {
@@ -113,7 +115,10 @@ const CoordinatorDashboardPage = () => {
       const [me, participantData, sponsorData] = await Promise.all([fetchCoordinatorMe(), fetchCoordinatorParticipants(), fetchCoordinatorSponsors()]);
       const coordinator = (me.coordinator || null) as CoordinatorProfile | null;
       const nextEvents = (me.events || []) as CoordinatorEvent[];
-      const nextParticipants = (participantData.participants || []) as ParticipantRow[];
+      const nextParticipants = (participantData.participants || []).map((row: ParticipantRow & { _id?: string; id?: string }) => ({
+        ...row,
+        id: row.id || row._id || ""
+      })) as ParticipantRow[];
       const nextSponsors = sponsorData.sponsors || [];
       setProfile(coordinator);
       setEvents(nextEvents);

@@ -8,8 +8,12 @@ import { formatBackendEvent, formatDateLabel, formatDescriptionText, formatTimeL
 import { BackendEvent } from "@/types";
 import { BadgeCheck, Calendar, Clock, Image as ImageIcon, MapPin, Trophy } from "lucide-react";
 
-const EVENTS_CACHE_KEY = "techfestPublicEventsCache";
-const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:";
+const EVENTS_CACHE_KEY = "techfestPublicEventsCache:v2";
+const EVENT_DETAILS_CACHE_PREFIX = "techfestEventDetailsCache:v2:";
+
+function isTechTankTitle(title?: string) {
+  return /tech[\s-]?tank/i.test(String(title || ""));
+}
 
 function hasNegativeRewardSignal(line: string) {
   return /(no prize|without prize|prize not available|no certificate|without certificate|certificate not available|no completion certificate|no participation certificate|not applicable|n\/a|none)/i.test(line);
@@ -69,6 +73,7 @@ const EventDetailsPage = () => {
   const formatted = useMemo(() => (event ? formatBackendEvent(event) : null), [event]);
   const formattedDescription = useMemo(() => formatDescriptionText(event?.description), [event?.description]);
   const eventTypeLabel = useMemo(() => {
+    if (isTechTankTitle(event?.title)) return "Technical";
     const raw = String(event?.eventType || event?.displayCategory || formatted?.category || "").trim();
     if (!raw) return "N/A";
     if (raw.toLowerCase().startsWith("workshop")) return "Workshop";
