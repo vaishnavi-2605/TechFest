@@ -214,7 +214,7 @@ const AboutSection = ({ stats }: { stats: { label: string; value: number; icon: 
   );
 };
 
-const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
+const EventsPreview = ({ events, loading }: { events: BackendEvent[]; loading: boolean }) => {
   const [activeFilter, setActiveFilter] = useState<(typeof eventFilterOptions)[number]>("All");
   const [previewPoster, setPreviewPoster] = useState<{ url: string; title?: string } | null>(null);
   const formattedEvents = useMemo(() => events.map(formatBackendEvent), [events]);
@@ -334,7 +334,11 @@ const EventsPreview = ({ events }: { events: BackendEvent[] }) => {
             </button>
           ))}
         </div>
-        {!regularEvents.length ? (
+        {loading && !events.length ? (
+          <p className="text-sm text-muted-foreground text-center mt-8">
+            Loading events...
+          </p>
+        ) : !regularEvents.length ? (
           <p className="text-sm text-muted-foreground text-center mt-8">
             No featured events found for the selected category.
           </p>
@@ -413,6 +417,7 @@ const SponsorsStrip = ({ sponsors }: { sponsors: Sponsor[] }) => {
 
 const Index = () => {
   const [events, setEvents] = useState<BackendEvent[]>(() => getCachedHomeData(EVENTS_CACHE_KEY, []));
+  const [eventsLoading, setEventsLoading] = useState(events.length === 0);
   const [sponsors, setSponsors] = useState<Sponsor[]>(() => getCachedHomeData(SPONSORS_CACHE_KEY, []));
   const [liveStats, setLiveStats] = useState(() =>
     getCachedHomeData(STATS_CACHE_KEY, {
@@ -429,6 +434,7 @@ const Index = () => {
   });
 
   useEffect(() => {
+    setEventsLoading(true);
     fetchEvents()
       .then((data) => {
         const rows = data.events || [];
@@ -444,7 +450,8 @@ const Index = () => {
           }
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setEventsLoading(false));
 
     fetchSponsors()
       .then((data) => {
@@ -488,7 +495,7 @@ const Index = () => {
     <div>
       <HeroSection nextEventDate={latestEventDateLabel} nextEventTimeText={latestEventTimeText} />
       <AboutSection stats={stats} />
-      <EventsPreview events={events} />
+      <EventsPreview events={events} loading={eventsLoading} />
       <SponsorsStrip sponsors={sponsors} />
     </div>
   );

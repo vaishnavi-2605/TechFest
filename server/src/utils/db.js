@@ -41,9 +41,12 @@ function getConnectionPlan() {
 
 async function connectDatabase() {
   const targets = getConnectionPlan().filter((item) => item.uri);
+  const envFileHint = String(process.env.NODE_ENV || "").trim().toLowerCase() === "development"
+    ? "server/.env.local"
+    : "server/.env";
 
   if (!targets.length) {
-    throw new Error("Missing database URI. Add MONGODB_URI or LOCAL_MONGODB_URI in server/.env.");
+    throw new Error(`Missing database URI. Add MONGODB_URI or LOCAL_MONGODB_URI in ${envFileHint}.`);
   }
 
   let lastError;
@@ -59,6 +62,10 @@ async function connectDatabase() {
       lastError = error;
       console.warn(`MongoDB connection failed for ${target.label}: ${error.message}`);
     }
+  }
+
+  if (lastError) {
+    lastError.message = `${lastError.message} Checked ${envFileHint}.`;
   }
 
   throw lastError || new Error("Failed to connect to MongoDB.");
