@@ -57,7 +57,7 @@ function getResolvedImageUrl(doc, fieldName, req, entity) {
   if (!doc || !fieldName) return "";
 
   const image = doc[`${fieldName}Image`];
-  if (image?.data && image?.contentType) {
+  if (image?.contentType) {
     return buildImageUrl(req, entity, doc._id || doc.id, fieldName);
   }
 

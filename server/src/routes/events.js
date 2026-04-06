@@ -7,6 +7,38 @@ const { getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
 
+const publicEventProjection = {
+  eventId: 1,
+  department: 1,
+  title: 1,
+  shortDescription: 1,
+  displayCategory: 1,
+  displayTeamSize: 1,
+  displayPrize: 1,
+  displayDeadline: 1,
+  eventType: 1,
+  description: 1,
+  posterUrl: 1,
+  "posterImage.contentType": 1,
+  isTeamEvent: 1,
+  teamSize: 1,
+  fee: 1,
+  paymentQrUrl: 1,
+  "paymentQrImage.contentType": 1,
+  whatsappGroupLink: 1,
+  address: 1,
+  time: 1,
+  guide: 1,
+  guidePhone: 1,
+  registrationClosed: 1,
+  coordinatorId: 1,
+  status: 1,
+  rules: 1,
+  subEvents: 1,
+  createdAt: 1,
+  updatedAt: 1
+};
+
 function getActiveEventQuery() {
   return {
     $or: [
@@ -116,7 +148,10 @@ router.get("/coordinators/public", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const signatureCoordinatorId = await getSignatureCoordinatorId();
-    const events = await Event.find(getActiveEventQuery()).sort({ department: 1, title: 1 }).lean();
+    const events = await Event.find(getActiveEventQuery())
+      .select(publicEventProjection)
+      .sort({ department: 1, title: 1 })
+      .lean();
     res.json({
       events: events.map((rawEvent) => {
         const event = applyEventOverrides(rawEvent);
@@ -164,7 +199,9 @@ router.get("/:eventId", async (req, res) => {
     const event = await Event.findOne({
       eventId: req.params.eventId,
       ...getActiveEventQuery()
-    }).lean();
+    })
+      .select(publicEventProjection)
+      .lean();
     if (!event) return res.status(404).json({ error: "Event not found." });
     const nextEvent = applyEventOverrides(event);
     return res.json({
