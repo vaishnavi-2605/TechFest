@@ -19,7 +19,7 @@ function hasNegativeRewardSignal(line: string) {
   return /(no prize|without prize|prize not available|no certificate|without certificate|certificate not available|no completion certificate|no participation certificate|not applicable|n\/a|none)/i.test(line);
 }
 
-function readCachedEvent(eventId: string) {
+function readCachedDetailedEvent(eventId: string) {
   if (typeof window === "undefined" || !eventId) return null;
 
   try {
@@ -28,6 +28,12 @@ function readCachedEvent(eventId: string) {
   } catch {
     // ignore malformed cache
   }
+
+  return null;
+}
+
+function readCachedListEvent(eventId: string) {
+  if (typeof window === "undefined" || !eventId) return null;
 
   try {
     const eventsCache = JSON.parse(sessionStorage.getItem(EVENTS_CACHE_KEY) || "null") as { events?: BackendEvent[] } | null;
@@ -40,17 +46,21 @@ function readCachedEvent(eventId: string) {
 
 const EventDetailsPage = () => {
   const { eventId = "" } = useParams();
-  const [event, setEvent] = useState<BackendEvent | null>(() => readCachedEvent(eventId));
+  const [event, setEvent] = useState<BackendEvent | null>(() => readCachedDetailedEvent(eventId) || readCachedListEvent(eventId));
   const [alert, setAlert] = useState("");
-  const [loading, setLoading] = useState(!readCachedEvent(eventId));
+  const [loading, setLoading] = useState(!readCachedDetailedEvent(eventId));
+  const [hasFullDetails, setHasFullDetails] = useState(Boolean(readCachedDetailedEvent(eventId)));
   const [previewPoster, setPreviewPoster] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = readCachedEvent(eventId);
-    if (cached) {
-      setEvent(cached);
+    const cachedDetails = readCachedDetailedEvent(eventId);
+    if (cachedDetails) {
+      setEvent(cachedDetails);
+      setHasFullDetails(true);
       setLoading(false);
     } else {
+      setEvent(readCachedListEvent(eventId));
+      setHasFullDetails(false);
       setLoading(true);
     }
 
@@ -58,6 +68,7 @@ const EventDetailsPage = () => {
       .then((data) => {
         const nextEvent = data.event || null;
         setEvent(nextEvent);
+        setHasFullDetails(Boolean(nextEvent));
         if (nextEvent) {
           try {
             sessionStorage.setItem(`${EVENT_DETAILS_CACHE_PREFIX}${eventId}`, JSON.stringify({ event: nextEvent }));
@@ -160,14 +171,16 @@ const EventDetailsPage = () => {
               </motion.p>
             ) : null}
 
-            <motion.p
-              className="text-muted-foreground whitespace-pre-line"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut", delay: 0.45 }}
-            >
-              {formattedDescription || event.description}
-            </motion.p>
+            {event.description ? (
+              <motion.p
+                className="text-muted-foreground whitespace-pre-line"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: 0.45 }}
+              >
+                {hasFullDetails ? (formattedDescription || event.description) : "Loading full description..."}
+              </motion.p>
+            ) : null}
 
             <motion.div
               className="space-y-5"

@@ -64,11 +64,12 @@ function isTechTankTitle(title) {
 
 function applyEventOverrides(event) {
   if (isTechTankTitle(event?.title)) {
+    const fallbackSummary = "It's not just about pitching a startup - it's about building, investing, and winning like real founders.";
     return {
       ...event,
       title: "Tech Tank: Equity Wars",
-      shortDescription: "It’s not just about pitching a startup — it’s about building, investing, and winning like real founders.",
-      description: "It’s not just about pitching a startup — it’s about building, investing, and winning like real founders.",
+      shortDescription: fallbackSummary,
+      description: String(event?.description || "").trim() || fallbackSummary,
       eventType: "Technical",
       displayCategory: "Technical",
     };
