@@ -6,6 +6,8 @@ const path = require("path");
 
 const { connectDatabase } = require("./utils/db");
 const { seedDefaultAdmin, seedSignatureCoordinator } = require("./utils/seedUsers");
+const { applySecurityHeaders, createRateLimiter } = require("./middleware/security");
+const { getJwtSecret } = require("./utils/authSecurity");
 const { uploadDir } = require("./utils/upload");
 const imageRouter = require("./routes/images");
 const eventsRouter = require("./routes/events");
@@ -19,8 +21,14 @@ const sponsorsRouter = require("./routes/sponsors");
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
 let server;
+const privilegedRouteLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 120,
+  message: "Too many requests. Please slow down and try again."
+});
 
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
 const allowedOrigins = String(process.env.CLIENT_ORIGIN || "http://localhost:5173,http://localhost:8080")
   .split(",")
@@ -36,6 +44,7 @@ app.use(cors({
     callback(new Error("CORS origin not allowed."));
   }
 }));
+app.use(applySecurityHeaders);
 app.use(express.json({ limit: "5mb" }));
 app.use("/uploads", express.static(path.resolve(uploadDir)));
 
@@ -47,8 +56,8 @@ app.use("/api/images", imageRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/events", eventsRouter);
 app.use("/api/registrations", registrationsRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/coordinator", coordinatorRouter);
+app.use("/api/admin", privilegedRouteLimiter, adminRouter);
+app.use("/api/coordinator", privilegedRouteLimiter, coordinatorRouter);
 app.use("/api/contact", contactRouter);
 app.use("/api/sponsors", sponsorsRouter);
 
@@ -57,6 +66,7 @@ app.use((_req, res) => {
 });
 
 async function start() {
+  getJwtSecret();
   await connectDatabase();
   await seedDefaultAdmin();
   await seedSignatureCoordinator();

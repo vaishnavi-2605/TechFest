@@ -4,15 +4,22 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { createRateLimiter } = require("../middleware/security");
 const { upload } = require("../utils/upload");
+const { getJwtSecret } = require("../utils/authSecurity");
 const { setStoredImage, setImageFromBodyValue, getResolvedImageUrl } = require("../utils/imageStorage");
 
 const router = express.Router();
+const loginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 10,
+  message: "Too many login attempts. Please wait 15 minutes and try again."
+});
 
 function signToken(user) {
   return jwt.sign(
     { id: user._id.toString(), role: user.role, email: user.email, username: user.username, name: user.name },
-    process.env.JWT_SECRET || "techfest-dev-secret",
+    getJwtSecret(),
     { expiresIn: "7d" }
   );
 }
@@ -94,7 +101,7 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
     const effectiveRole = getEffectiveRole(user);
     const token = jwt.sign(
       { id: user._id.toString(), role: effectiveRole, email: user.email, username: user.username, name: user.name },
-      process.env.JWT_SECRET || "techfest-dev-secret",
+      getJwtSecret(),
       { expiresIn: "7d" }
     );
 
@@ -118,7 +125,7 @@ router.post("/register-coordinator", upload.single("photo"), async (req, res) =>
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginRateLimiter, async (req, res) => {
   try {
     const { email, username, password } = req.body || {};
     const loginId = String(email || username || "").trim().toLowerCase();

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node scripts/ensure-port.js && nodemon --config nodemon.json --exec \"node -r dotenv/config src/index.js dotenv_config_path=.env.local\"",
     "dev:server": "node scripts/ensure-port.js && nodemon --config nodemon.json --exec \"node -r dotenv/config src/index.js dotenv_config_path=.env.local\"",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "reset-admin": "node -r dotenv/config scripts/reset-admin.js dotenv_config_path=.env.local"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

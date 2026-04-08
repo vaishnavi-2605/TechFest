@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { getJwtSecret } = require("../utils/authSecurity");
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || "";
@@ -9,7 +10,7 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "techfest-dev-secret");
+    const payload = jwt.verify(token, getJwtSecret());
     req.user = payload;
     return next();
   } catch (_error) {

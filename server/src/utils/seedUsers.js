@@ -32,6 +32,43 @@ async function seedDefaultAdmin() {
   });
 }
 
+async function resetDefaultAdmin() {
+  const adminEmail = String(process.env.ADMIN_EMAIL || "admin@techfest.com").trim().toLowerCase();
+  const adminUsername = String(process.env.ADMIN_USERNAME || adminEmail.split("@")[0] || "admin")
+    .trim()
+    .toLowerCase();
+  const adminPassword = String(process.env.ADMIN_PASSWORD || "admin123");
+  const adminName = String(process.env.ADMIN_NAME || "TechFest Admin");
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
+  let user =
+    await User.findOne({ role: "super_admin" }) ||
+    await User.findOne({ email: adminEmail }) ||
+    await User.findOne({ username: adminUsername });
+
+  if (user) {
+    user.name = adminName;
+    user.username = adminUsername;
+    user.email = adminEmail;
+    user.passwordHash = passwordHash;
+    user.role = "super_admin";
+    user.isActive = true;
+    await user.save();
+    return { action: "updated", user };
+  }
+
+  user = await User.create({
+    name: adminName,
+    username: adminUsername,
+    email: adminEmail,
+    passwordHash,
+    role: "super_admin",
+    isActive: true
+  });
+
+  return { action: "created", user };
+}
+
 async function seedSignatureCoordinator() {
   const signatureEmail = String(process.env.SIGNATURE_EVENT_COORDINATOR_EMAIL || "").trim().toLowerCase();
   const signaturePassword = String(process.env.SIGNATURE_EVENT_COORDINATOR_PASSWORD || "");
@@ -66,4 +103,4 @@ async function seedSignatureCoordinator() {
   });
 }
 
-module.exports = { seedDefaultAdmin, seedSignatureCoordinator };
+module.exports = { seedDefaultAdmin, resetDefaultAdmin, seedSignatureCoordinator };

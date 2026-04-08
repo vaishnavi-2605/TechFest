@@ -11,14 +11,14 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const ok = /image\/(jpeg|jpg|png|webp|gif|svg\+xml)/.test(file.mimetype || "");
+    const ok = /image\/(jpeg|jpg|png|webp|gif)/.test(file.mimetype || "");
     cb(ok ? null : new Error("Only image uploads are allowed."), ok);
   }
 });
 
 function getSafeExtension(file) {
   const ext = path.extname(file?.originalname || "").toLowerCase();
-  return [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"].includes(ext) ? ext : ".jpg";
+  return [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ? ext : ".jpg";
 }
 
 function saveFileLocally(file) {
